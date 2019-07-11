@@ -1,0 +1,17 @@
+# See https://github.com/github/gitignore
+# for a collection of useful .gitignore templates
+
+# Object files
+*.o
+
+# Libraries (static)
+*.a
+
+# Project binaries
+/bin/*
+!/bin/.keep
+
+# Project object files
+/obj/*
+!/obj/.keep
+
