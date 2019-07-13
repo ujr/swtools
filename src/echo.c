@@ -2,7 +2,8 @@
 #include "common.h"
 
 int
-echocmd(int argc, char **argv){
+echocmd(int argc, char **argv)
+{
   const char blank = ' ';
   argc--, argv++; // shift
   // TODO options: -n, -e
@@ -12,5 +13,5 @@ echocmd(int argc, char **argv){
     putstr(*argv++);
   }
   putch('\n');
-  return 0;
+  return SUCCESS;
 }

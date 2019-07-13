@@ -1,5 +1,6 @@
 
 #include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
@@ -10,12 +11,17 @@ struct {
   const char *name;
   toolfun *fun;
 } tools[] = {
+  { "copy", copycmd },
   { "echo", echocmd },
   { 0, 0 }
 };
 
+static const char *progname;
+static const char *toolname;
+
 const char *
-progname(char **argv){
+basename(char **argv)
+{
   const char *s = 0;
   register const char *p;
   if (argv && *argv) {
@@ -29,8 +35,37 @@ progname(char **argv){
   return (char *) s;
 }
 
+/* print system error message to stderr */
+void
+printerr(const char *msg)
+{
+  FILE *fp = stderr;
+
+  // Syntax: progname[ toolname]: [msg: ]errno\n
+
+  fputs(progname, fp);
+
+  if (toolname && *toolname && !streq(toolname, progname)) {
+    fputc(' ', fp);
+    fputs(toolname, fp);
+  }
+
+  if (msg && *msg) {
+    fputs(": ", fp);
+    fputs(msg, fp);
+  }
+
+  if (errno || !msg || !*msg) {
+    fputs(": ", fp);
+    fputs(strerror(errno), fp);
+  }
+
+  fputc('\n', fp);
+}
+
 static toolfun *
-findtool(const char *name){
+findtool(const char *name)
+{
   if (!name) return 0; // no name
   for (int i=0; tools[i].name; i++){
     if (streq(name, tools[i].name)){
@@ -43,9 +78,6 @@ findtool(const char *name){
 // Usage: quux [opts] <cmd> [args]
 // Usage: <cmd> [args]
 
-const char *me;
-int verbosity = 0;
-
 static void
 usage(const char *fmt, ...)
 {
@@ -54,12 +86,12 @@ usage(const char *fmt, ...)
   if (fmt) {
     va_start(ap, fmt);
     vsnprintf(msg, sizeof(msg), fmt, ap);
-    fprintf(stderr, "%s: %s\n", me, msg);
+    fprintf(stderr, "%s: %s\n", progname, msg);
     va_end(ap);
   } else {
-    fprintf(stderr, "This is %s version %s\n", me, RELEASE);
+    fprintf(stderr, "This is %s version %s\n", progname, RELEASE);
   }
-  fprintf(stderr, "Usage: %s <command> [arguments]\n", me);
+  fprintf(stderr, "Usage: %s <command> [arguments]\n", progname);
   fprintf(stderr, "   or: <command> [arguments]\n commands:");
   for (int i=0; tools[i].name; i++)
     fprintf(stderr, " %s", tools[i].name);
@@ -71,21 +103,28 @@ main(int argc, char **argv)
 {
   toolfun *cmd;
 
-  me = progname(argv);
-  if (!me) return FAILHARD;
+  toolname = 0;
+  progname = basename(argv);
+  if (!progname) return FAILHARD;
 
-  cmd = findtool(me);
-  if (cmd) return cmd(argc, argv);
+  cmd = findtool(progname);
+  if (cmd) {
+    toolname = progname;
+    return cmd(argc, argv);
+  }
 
   argc -= 1, argv += 1; // shift progname
 
-  if (!*argv) {
+  if (!*argv) { // no command specified
     usage(0);
     return SUCCESS;
   }
 
   cmd = findtool(*argv);
-  if (cmd) return cmd(argc, argv);
+  if (cmd) {
+    toolname = *argv;
+    return cmd(argc, argv);
+  }
 
   usage("no such command: %s", *argv);
   return FAILHARD;

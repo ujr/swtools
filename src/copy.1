@@ -1,0 +1,24 @@
+.TH COPY 1 July\ 2019 local
+.SH NAME
+copy \- copy standard input to standard output
+.SH SYNOPSIS
+\fBcopy\fP
+.SH DESCRIPTION
+\fBcopy\fP copies standard input to standard output unchanged.
+It is useful for copying from a terminal to a file, from a file
+to a file, or even from terminal to terminal. It may be used
+for displaying the contents of a file, without interpretation
+or formatting, by copying from a file to terminal.
+.SH EXAMPLE
+To echo lines typed at your terminal:
+.PP
+.nf
+.RS
+copy
+hello there, are you listening?
+\fIhello there, are you listening?\fP
+yes, I am.
+\fIyes, I am.\fP
+<EOF>
+.RE
+.fi
