@@ -12,10 +12,12 @@ struct {
   toolfun *fun;
 } tools[] = {
   { "copy", copycmd },
+  { "count", countcmd },
   { "echo", echocmd },
   { 0, 0 }
 };
 
+const char *me; // for error messages
 static const char *progname;
 static const char *toolname;
 
@@ -33,6 +35,19 @@ basename(char **argv)
     }
   }
   return (char *) s;
+}
+
+const char *
+makeident(const char *s, const char *t)
+{
+  size_t ns = s ? strlen(s) : 0;
+  size_t nt = t ? strlen(t) : 0;
+  char *p = malloc(ns+1+nt+1);
+  if (!p) abort(); // lazyness
+  if (s) strcpy(p, s);
+  if (s && t) p[ns] = ' ';
+  if (t) strcpy(p+ns+1, t);
+  return p;
 }
 
 /* print system error message to stderr */
@@ -83,19 +98,20 @@ usage(const char *fmt, ...)
 {
   char msg[256];
   va_list ap;
+  FILE *fp = fmt ? stderr : stdout;
   if (fmt) {
     va_start(ap, fmt);
     vsnprintf(msg, sizeof(msg), fmt, ap);
-    fprintf(stderr, "%s: %s\n", progname, msg);
+    fprintf(fp, "%s: %s\n", progname, msg);
     va_end(ap);
   } else {
-    fprintf(stderr, "This is %s version %s\n", progname, RELEASE);
+    fprintf(fp, "This is %s version %s\n", progname, RELEASE);
   }
-  fprintf(stderr, "Usage: %s <command> [arguments]\n", progname);
-  fprintf(stderr, "   or: <command> [arguments]\n commands:");
+  fprintf(fp, "Usage: %s <command> [arguments]\n", progname);
+  fprintf(fp, "   or: <command> [arguments]\n commands:");
   for (int i=0; tools[i].name; i++)
-    fprintf(stderr, " %s", tools[i].name);
-  fprintf(stderr, "\n arguments are command specific\n");
+    fprintf(fp, " %s", tools[i].name);
+  fprintf(fp, "\n arguments are command specific\n");
 }
 
 int
@@ -109,11 +125,11 @@ main(int argc, char **argv)
 
   cmd = findtool(progname);
   if (cmd) {
-    toolname = progname;
+    toolname = me = progname;
     return cmd(argc, argv);
   }
 
-  argc -= 1, argv += 1; // shift progname
+  SHIFTARGS(argc, argv, 1);
 
   if (!*argv) { // no command specified
     usage(0);
@@ -123,6 +139,7 @@ main(int argc, char **argv)
   cmd = findtool(*argv);
   if (cmd) {
     toolname = *argv;
+    me = makeident(progname, *argv);
     return cmd(argc, argv);
   }
 

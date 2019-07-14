@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define VERSION "0.1"
@@ -8,9 +9,12 @@
 #define FAILHARD 127  /* status code for permanent (hard) error */
 #define FAILSOFT 111  /* status code for temporary (soft) error */
 
+#define SHIFTARGS(ac, av, n) do { (ac)-=n; (av)+=n; } while (0)
 #define UNUSED(x) (void)(x)  /* to suppress "unused parameter" warnings */
 
 typedef int toolfun(int argc, char **argv);
+
+const char *me;  /* for error messages */
 
 /* Primitives */
 
@@ -28,4 +32,5 @@ void printerr(const char *msg);
 /* Command entry points */
 
 int copycmd(int argc, char **argv);
+int countcmd(int argc, char **argv);
 int echocmd(int argc, char **argv);

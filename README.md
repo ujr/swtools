@@ -12,6 +12,9 @@ but I consider it a rite of passage. Here a selection of the
 Pascal from the book will be recast in working C program.
 Neither completeness nor fidelity is a goal.
 
+My progress through the book and notes about the individual tools
+and their restatement in C can be found in [doc/Tools.md](doc/Tools.md).
+
 
 Structure
 ---------

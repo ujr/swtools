@@ -1,0 +1,35 @@
+.TH COUNT 1 July\ 2019 local
+.SH NAME
+count \- count lines, words, and bytes (characters)
+.SH SYNOPSIS
+\fBcount\fP [-lwc]
+.SH DESCRIPTION
+\fBcount\fP counts the number of lines, words, and bytes in the
+standard input, and writes the counts, separated by blanks, as
+a single line of text to standard output.
+.PP
+The only option controls which counts to output, and in what order.
+It must be the first argument, start with a dash, and contain no
+characters other than \fBl\fP (lines), \fBw\fP (words), and \fBc\fP
+(bytes). If no option is given, \fB-lwc\fP is assumed, resulting in
+the line, word, and byte counts being output, in this order.
+.PP
+The number of lines is the number of newline characters (the
+byte hex 0A or oct 012) in the input. A "word" is a maximal
+sequence of characters not containing a blank or tab or newline.
+.SH EXAMPLE
+.nf
+.RS
+$ \fBcount\fP
+A single line of input.
+<EOF>
+\fI       1       5      24\fP
+.RE
+.fi
+.SH BUGS
+The definition of "word" is simplistic.
+.PP
+The number of bytes is not necessarily the same as the number
+of characters. Add an option to count UTF-8 characters.
+.PP
+Should allow arguments to specify files other than standard input.

@@ -83,14 +83,15 @@ to show program version and `-v` to raise verbosity.
 References
 ----------
 
+Besides the book *Software Tools in Pascal*, the following references
+have been consulted in the creation of this project:
+
 [A Tutorial on Portable Makefiles](https://nullprogram.com/blog/2017/08/20/)
-from Chris Wellons's blog (20 Aug 2017).
-
-The above refers to the [specification for
+from Chris Wellons's blog (20 Aug 2017); it refers to the [specification for
 make](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/make.html)
-at the Open Group.
+at the Open Group (the POSIX standard).
 
-See [unlicense.org](https://unlicense.org/) for a simple way to
-dedicate some work to the public domain.
+[The Unlicense (unlicense.org)](https://unlicense.org/) is a simple way
+to dedicate some work to the public domain.
 
 
