@@ -86,3 +86,14 @@ the generated [wc.pdf][wc.pdf] online).
 [cweb]: https://ctan.org/tex-archive/web/c_cpp/cweb
 [wc.pdf]: http://tex.loria.fr/litte/wc.pdf
 
+
+Converting Tabs and Blanks
+--------------------------
+
+The two tools *detab* and *entab* convert tabs to blanks
+and vice versa. (Unix comes with similar tools called
+*expand* and *unexpand*.) My implementation follows
+the variation suggested in Exercise 1-7(b) and my
+*tabpos* function returns the *next* tab stop *after*
+the given column.
+

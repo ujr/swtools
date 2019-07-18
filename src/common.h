@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,10 +28,12 @@ const char *me;  /* for error messages */
 #define streq(s,t) (0==strcmp((s),(t)))
 
 const char *basename(char **argv);
+int scanint(const char *s, int *v);
 void printerr(const char *msg);
 
 /* Command entry points */
 
 int copycmd(int argc, char **argv);
 int countcmd(int argc, char **argv);
+int detabcmd(int argc, char **argv);
 int echocmd(int argc, char **argv);

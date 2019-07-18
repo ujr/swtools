@@ -94,4 +94,6 @@ at the Open Group (the POSIX standard).
 [The Unlicense (unlicense.org)](https://unlicense.org/) is a simple way
 to dedicate some work to the public domain.
 
+The [POSIX standards](http://pubs.opengroup.org/onlinepubs/9699919799/)
+(IEEE Std 1003.1-2017), volume about *Shell & Utilities*.
 

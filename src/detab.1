@@ -1,0 +1,34 @@
+.TH DETAB 1 July\ 2019 local
+.SH NAME
+detab \- convert tabs to blanks
+.SH SYNOPSIS
+\fBdetab\fP [tab stops]
+.SH DESCRIPTION
+\fBdetab\fP copies its input to its output, expanding horizontal
+tabs to blanks, so that the output is visually the same as the
+input, but contains no tab characters.
+.PP
+Arguments specify the tab stops, either as the number of
+columns from the left margin (the leftmost column is numbered
+0), or, if prefixed with \fB+\fP, as the number of columns
+from the previous tab stop.
+If the last tab stop is prefixed with \fB+\fP, then it is
+repeated indefinitely. For example, 2 +4 sets tab stops
+in columns 2, 6, 10, 14, etc.
+If no tab stops are specified, tab tops are assumed
+every four columns (i.e., 0, 4, 8, ...) and each tab
+character is replaced by from one to four blanks.
+.PP
+Backspaces are copied to the output and affect the internal column
+calculations.
+.SH EXAMPLE
+Using \[->] as a visible tab:
+.nf
+.RS
+$ \fBdetab\fP
+\[->]col 1\[->]2\[->]34\[->]rest
+\fI    col 1   2   34  rest\fP
+.RE
+.fi
+.SH BUGS
+\fBdetab\fP is naive about vertical motions and non-printing characters.

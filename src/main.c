@@ -1,6 +1,8 @@
 
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
@@ -13,6 +15,7 @@ struct {
 } tools[] = {
   { "copy", copycmd },
   { "count", countcmd },
+  { "detab", detabcmd },
   { "echo", echocmd },
   { 0, 0 }
 };
@@ -35,6 +38,32 @@ basename(char **argv)
     }
   }
   return (char *) s;
+}
+
+int
+scanint(const char *s, int *v)
+{
+  int neg, n;
+  const char *p;
+
+  if (!s) return 0;
+
+  p = s;
+  neg = 0;
+
+  switch (*p) {
+    case '-': neg=1; /* FALLTHRU */
+    case '+': p+=1; break;
+  }
+
+  /* compute -n to get INT_MIN without overflow, but
+     input outside INT_MIN..INT_MAX silently overflows */
+  for (n = 0; isdigit(*p); p++) {
+    n = 10 * n - (*p - '0');
+  }
+
+  if (v) *v = neg ? n : -n;
+  return p - s; // #chars scanned
 }
 
 const char *
