@@ -22,6 +22,7 @@ struct {
 };
 
 const char *me; // for error messages
+int verbosity = 0;
 static const char *progname;
 static const char *toolname;
 
@@ -124,6 +125,12 @@ findtool(const char *name)
 // Usage: <cmd> [args]
 
 static void
+identity()
+{
+  printf("This is %s version %s\n", progname, RELEASE);
+}
+
+static void
 usage(const char *fmt, ...)
 {
   char msg[256];
@@ -134,20 +141,34 @@ usage(const char *fmt, ...)
     vsnprintf(msg, sizeof(msg), fmt, ap);
     fprintf(fp, "%s: %s\n", progname, msg);
     va_end(ap);
-  } else {
-    fprintf(fp, "This is %s version %s\n", progname, RELEASE);
   }
-  fprintf(fp, "Usage: %s <command> [arguments]\n", progname);
-  fprintf(fp, "   or: <command> [arguments]\n commands:");
+  fprintf(fp, "Usage: %s [options] <command> [arguments]\n", progname);
+  fprintf(fp, "   or: <command> [arguments]\n");
+  fprintf(fp, " options:  -v  verbose mode\n commands:");
   for (int i=0; tools[i].name; i++)
     fprintf(fp, " %s", tools[i].name);
   fprintf(fp, "\n arguments are command specific\n");
+}
+
+static int
+parseopts(int argc, char **argv)
+{
+  if (argc > 0 && argv[0] && *argv[0] == '-') {
+    switch (argv[0][1]) {
+      case 'v': verbosity += 1; break;
+      case 'V': identity(0); exit(SUCCESS); break;
+      default: usage("invalid option"); return -1;
+    }
+    return 1;
+  }
+  return 0;
 }
 
 int
 main(int argc, char **argv)
 {
   toolfun *cmd;
+  int r;
 
   toolname = 0;
   progname = basename(argv);
@@ -160,8 +181,12 @@ main(int argc, char **argv)
   }
 
   SHIFTARGS(argc, argv, 1);
+  r = parseopts(argc, argv);
+  if (r < 0) return FAILHARD;
+  SHIFTARGS(argc, argv, r);
 
   if (!*argv) { // no command specified
+    identity();
     usage(0);
     return SUCCESS;
   }

@@ -16,6 +16,7 @@
 typedef int toolfun(int argc, char **argv);
 
 const char *me;  /* for error messages */
+int verbosity;   /* normally 0=silenty */
 
 /* Primitives */
 

@@ -132,10 +132,11 @@ tabinit(int stops[], int argc, char **argv)
     j++;
   }
 
-// TODO output to stderr only if in "verbose" mode
-fprintf(stderr, "%s: stops:", me);
-for(i=0;i<j;i++) fprintf(stderr, " %d", stops[i]);
-fprintf(stderr, "\n");
+  if (verbosity > 0) {
+    fprintf(stderr, "%s: stops:", me);
+    for(i=0;i<j;i++) fprintf(stderr, " %d", stops[i]);
+    fprintf(stderr, "\n");
+  }
 
   stops[j] = 0; // end marker
   return SUCCESS;
