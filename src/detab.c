@@ -21,7 +21,7 @@ detabcmd(int argc, char **argv)
   while ((c = getch()) != EOF) {
     if (c == '\t') {
       int stop = tabstop(stops, col);
-      for (; col < stop; col++) putch('.');
+      for (; col < stop; col++) putch(' ');
     }
     else if (c == '\b') {
       putch(c); // preserve the backspace
@@ -40,6 +40,44 @@ detabcmd(int argc, char **argv)
   return checkerr();
 }
 
+int
+entabcmd(int argc, char **argv)
+{
+  int r, c, col, newcol;
+  int stops[MAXSTOPS];
+
+  r = tabinit(stops, argc, argv);
+  if (r != SUCCESS) return r;
+
+  col = 0;
+  do {
+    newcol = col;
+    while ((c = getch()) == ' ') { // collect blanks
+      newcol += 1;
+      if (newcol == tabstop(stops, col)) {
+        putch('\t');
+        col = newcol;
+      }
+    }
+    if (c == '\t') {
+      newcol = tabstop(stops, col);
+      putch('\t');
+      col = newcol;
+    }
+    else while (col < newcol) { // remaining blanks
+      putch(' ');
+      col += 1;
+    }
+    if (c != EOF && c != '\t') {
+      putch(c);
+      if (c == '\n') col = 0;
+      else col += 1;
+    }
+  }
+  while (c != EOF);
+
+  return checkerr();
+}
 
 /*
 // Syntax: detab [t1 t2 ... tN]
@@ -94,7 +132,8 @@ tabinit(int stops[], int argc, char **argv)
     j++;
   }
 
-fprintf(stderr, "detab: stops:");
+// TODO output to stderr only if in "verbose" mode
+fprintf(stderr, "%s: stops:", me);
 for(i=0;i<j;i++) fprintf(stderr, " %d", stops[i]);
 fprintf(stderr, "\n");
 

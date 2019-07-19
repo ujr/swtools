@@ -97,3 +97,6 @@ the variation suggested in Exercise 1-7(b) and my
 *tabpos* function returns the *next* tab stop *after*
 the given column.
 
+Both *detab* and *entab* are in the same file *detab.c*
+because they share a lot of code.
+

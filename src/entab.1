@@ -1,0 +1,29 @@
+.TH ENTAB 1 July\ 2019 local
+.SH NAME
+entab \- convert runs of blanks to tabs
+.SH SYNOPSIS
+\fBentab\fP [tab stops]
+.SH DESCRIPTION
+\fBentab\fP copies its input to its output, replacing runs of blanks
+by tabs so that the output is visually the same as the input, but
+contains fewer characters.
+.PP
+Tab stops may be given as arguments (as described for \fBdetab\fP).
+If none are given, tab stops are assumed every four columns, and
+each run of one to four blanks ending on a tab stop is replaced
+by a tab character.
+.SH EXAMPLE
+Using \[->] as a visible tab:
+.nf
+.RS
+$ \fBentab\fP
+    col 1   2   34  rest
+\[->]col\[->]1\[->]2\[->]34\[->]rest
+.RE
+.fi
+.SH BUGS
+\fBentab\fP is naive about backspaces, vertical motions, and
+non-printing characters.
+\fBentab\fP will convert a single blank to a tab if it occurs
+at a tab stop. Thus \fBentab\fP is not an exact inverse of
+\fBdetab\fP.

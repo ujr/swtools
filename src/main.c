@@ -16,6 +16,7 @@ struct {
   { "copy", copycmd },
   { "count", countcmd },
   { "detab", detabcmd },
+  { "entab", entabcmd },
   { "echo", echocmd },
   { 0, 0 }
 };

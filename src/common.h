@@ -36,4 +36,5 @@ void printerr(const char *msg);
 int copycmd(int argc, char **argv);
 int countcmd(int argc, char **argv);
 int detabcmd(int argc, char **argv);
+int entabcmd(int argc, char **argv);
 int echocmd(int argc, char **argv);
