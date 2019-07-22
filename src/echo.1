@@ -2,11 +2,28 @@
 .SH NAME
 echo \- copy arguments to standard output
 .SH SYNOPSIS
-\fBecho\fP [\fIargument\fP ...]
+\fBecho\fP [-e] [-n] [\fIargument\fP ...]
 .SH DESCRIPTION
 \fBecho\fP copies its command line arguments to its standard output
 as a line of text with one space between each argument.
-If there are no arguments, an empty line is produced (just a newline).
+If there are no arguments, an empty line is produced
+(but see the \fB-n\fP option).
+.PP
+The option \fB-e\fP enables interpretation of escapes sequences
+in the arguments:
+\fB\\\\\fP (a backslash),
+\fB\\a\fP (an alert),
+\fB\\b\fP (a backspace),
+\fB\\e\fP (an escape),
+\fB\\f\fP (a form feed),
+\fB\\n\fP (a newline),
+\fB\\r\fP (a carriage return),
+\fB\\t\fP (a horizontal tab),
+\fB\\v\fP (a vertical tab),
+\fB\\0\fP (a null byte).
+The \fB\\c\fP escape from Unix echo is not implemented.
+.PP
+The option \fB-n\fP omits output of the trailing newline.
 .SH EXAMPLE
 To see if your system is alive:
 .PP
@@ -16,3 +33,6 @@ $ \fBecho\fP hello world!
 \fIhello world!\fP
 .RE
 .fi
+.SH SEE ALSO
+There is a nice little story about \fIThe Unix and the Echo\fP
+by Doug McIlroy.

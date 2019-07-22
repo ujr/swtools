@@ -100,3 +100,36 @@ the given column.
 Both *detab* and *entab* are in the same file *detab.c*
 because they share a lot of code.
 
+The *overstrike* tool I skip.
+
+
+Compress and Expand
+-------------------
+
+The *compress* and *expand* (uncompress) tools implement a simple
+run-length encoding, where runs of _n_ times a character _x_ are
+encoded as *~Nx* where the tilde ~ is arbitrarily chosen as a
+rarely-used character and _N_ is 'A'+_n_.
+A literal `~` would be encoded as `~A~` and is thus three times
+longer. Interesting is **exercise 2-14:**
+
+> Prove that any compression scheme that is reversible, accepts any
+> input, and makes some files smaller must also make some files longer.
+
+Well, there are more longer strings than shorter strings. Any reversible
+(that is, lossless) compression scheme therefore must map some strings
+to longer strings, simply because there are not enough shorter strings.
+
+
+Command Arguments and Echo
+--------------------------
+
+Other than with Pascal, in C the command line arguments are passed
+to the `main` method and therefore readily available.
+My C version of *echo* always outputs a newline, even if no arguments
+are given. As in Unix versions of echo, the newline can be omitted
+with the `-n` option, and interpretation of a few escape sequences can
+be turned on with the `-e` option (though not the `\c` escape to
+produce no further output). You may want to search the Internet
+for the little story about *The Unix and the Echo* by Doug McIlroy.
+
