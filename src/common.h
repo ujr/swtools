@@ -31,6 +31,7 @@ int verbosity;   /* normally 0=silenty */
 const char *basename(char **argv);
 int scanint(const char *s, int *v);
 void printerr(const char *msg);
+int checkioerr();
 
 /* Command entry points */
 

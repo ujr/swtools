@@ -109,6 +109,17 @@ printerr(const char *msg)
   fputc('\n', fp);
 }
 
+/* check stream error flag, print error message */
+int
+checkioerr()
+{
+  if (ferror(stdin) || ferror(stdout)) {
+    printerr(0);
+    return FAILSOFT;
+  }
+  return SUCCESS;
+}
+
 static toolfun *
 findtool(const char *name)
 {

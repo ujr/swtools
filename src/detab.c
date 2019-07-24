@@ -6,7 +6,6 @@
 
 static int tabinit(int stops[], int argc, char **argv);
 static int tabstop(int stops[], int column);
-static int checkerr();
 
 int
 detabcmd(int argc, char **argv)
@@ -37,7 +36,7 @@ detabcmd(int argc, char **argv)
     }
   }
 
-  return checkerr();
+  return checkioerr();
 }
 
 int
@@ -76,7 +75,7 @@ entabcmd(int argc, char **argv)
   }
   while (c != EOF);
 
-  return checkerr();
+  return checkioerr();
 }
 
 /*
@@ -158,14 +157,4 @@ tabstop(int stops[], int column)
   d = column - s; // distance to last stop
 
   return s + (1+d/o)*o;
-}
-
-static int
-checkerr()
-{
-  if (ferror(stdin) || ferror(stdout)) {
-    printerr(0);
-    return FAILSOFT;
-  }
-  return SUCCESS;
 }

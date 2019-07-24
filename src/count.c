@@ -50,16 +50,6 @@ printcounts(long nl, long nw, long nc)
   }
 }
 
-static int
-checkerr()
-{
-  if (ferror(stdin) || ferror(stdout)) {
-    printerr(0);
-    return FAILSOFT;
-  }
-  return SUCCESS;
-}
-
 int
 countcmd(int argc, char **argv)
 {
@@ -89,5 +79,5 @@ countcmd(int argc, char **argv)
   printcounts(nl, nw, nc);
   printf("\n");
 
-  return checkerr();
+  return checkioerr();
 }
