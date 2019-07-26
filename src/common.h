@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <stdbool.h>  /* C11 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

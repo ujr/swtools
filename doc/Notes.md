@@ -23,6 +23,26 @@ Also, the search paths for libraries and include files are built
 in the order specified by the `-L` and `-I` options.
 
 
+C89 vs C99
+----------
+
+**K&R C** is the original C, as described in the first edition (1978)
+of *The C Programming Language* by Kernighan and Ritschie.
+C was standardized by ANSI in 1989, and the second edition (1988)
+of *The C Programming Language* describes this revised version
+of C, known as **ANSI C** or **C89**. As compilers added features
+C was standardized again in 1999, creating the **C99** dialect.
+Today (2019) it is probably save to assume that C99 is supported
+by your compiler. Some of the new C99 features are:
+
+  *  C++ style line comments: `// comment`
+  *  the Boolean data type (`_Bool`, stdbool.h provides `bool`)
+  *  mixing declarations and code (not only at start of block)
+  *  variable-length arrays (length determined at runtime)
+  *  flexible array members (member array without a dimension)
+  *  variadic macros, the `offsetof` macro (from stddef.h)
+
+
 Makefiles
 ---------
 
