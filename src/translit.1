@@ -1,0 +1,46 @@
+.TH TRANSLIT 1 July\ 2019 local
+.SH NAME
+translit \- transliterate or delete characters
+.SH SYNOPSIS
+\fBtranslit\fP [-c] \fIsrc\fP [\fIdest\fP]
+.SH DESCRIPTION
+\fBtranslit\fP reads standard input, transliterates or deletes
+characters, and writes to standard output.
+.PP
+If \fIsrc\fP and \fIdest\fP have the same length, each character
+in the \fIsrc\fP set is mapped to the corresponding character (by
+position) in the \fIdest\fP set, all other characters are copied as is.
+.PP
+If \fIdest\fP is absent, all input characters in \fIsrc\fP are
+deleted.
+.PP
+If \fIdest\fP is shorter than \fIsrc\fP, all characters in \fIsrc\fP
+that would map to or beyond the last character in \fIdest\fP are
+mapped to that last character and runs of adjacent such input
+characters are squeezed into a single instance of the last
+character in \fIdest\fP. For example, \fBtranslit 0-9 9\fP
+converts digit strings to the single digit 9.
+.PP
+Characters in \fIsrc\fP and \fIdest\fP represent themselves, except
+that (1) \fIc1\fP-\fIc2\fP is a shorthand for all characters in
+the ordinal range \fIc1\fP..\fIc2\fP, and (2) the backslash escape
+sequences \fB\\\\\fP, \fB\\a\fP, \fB\\b\fP, \fB\\e\fP, \fB\\f\fP,
+\fB\\n\fP, \fB\\r\fP, \fB\\t\fP, \fB\\v\fP, and \fB\\0\fP have
+their usual interpretation.
+.PP
+The option \fB-c\fP builds the complement of \fIsrc\fP.
+.SH EXAMPLE
+To convert upper case to lower:
+.nf
+.RS
+$ \fBtranslit\fP A-Z a-z
+.RE
+.fi
+To discard punctuation and isolate words by spaces on each line:
+.nf
+.RS
+$ \fBtranslit\fP -c a-zA-Z\\n " "
+This is a simple-minded test, i.e., a test of translit.
+\fIThis is a simple minded test i e a test of translit\fP
+.RE
+.fi

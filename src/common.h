@@ -40,3 +40,4 @@ int countcmd(int argc, char **argv);
 int detabcmd(int argc, char **argv);
 int entabcmd(int argc, char **argv);
 int echocmd(int argc, char **argv);
+int translitcmd(int argc, char **argv);

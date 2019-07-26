@@ -18,6 +18,7 @@ struct {
   { "detab", detabcmd },
   { "entab", entabcmd },
   { "echo", echocmd },
+  { "translit", translitcmd },
   { 0, 0 }
 };
 

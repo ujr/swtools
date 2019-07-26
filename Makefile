@@ -17,7 +17,7 @@ install: all
 
 tools: bin/quux
 
-TOOLS = obj/copy.o obj/count.o obj/echo.o obj/detab.o
+TOOLS = obj/copy.o obj/count.o obj/echo.o obj/detab.o obj/translit.o
 bin/quux: obj/main.o $(TOOLS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 

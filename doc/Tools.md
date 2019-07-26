@@ -7,6 +7,10 @@ Brian W. Kernighan and P. J. Plauger,
 *Software Tools in Pascal*, Addison-Wesley, 1981.
 
 
+Tools in the book but not implemented here:
+*overstrike*, *compress*, *expand*
+
+
 Good Programs
 -------------
 
@@ -132,4 +136,23 @@ with the `-n` option, and interpretation of a few escape sequences can
 be turned on with the `-e` option (though not the `\c` escape to
 produce no further output). You may want to search the Internet
 for the little story about *The Unix and the Echo* by Doug McIlroy.
+
+
+Transliteration
+---------------
+
+The tool *translit* is analogous to the standard Unix *tr* command.
+It is the first substantial program in the book and will be built
+in four steps:
+
+  1.  transliteration (src and dest of same length)
+  2.  squash and delete (dest shorter or absent)
+  3.  complement of src set (the -c option)
+  4.  escapes and character ranges in the sets
+
+Both the book and the man page speak of _character_ transliteration,
+but it really is _byte by byte_ transliteration. With ASCII (and
+other one-byte-per-character encodings) this makes no difference.
+But with multi-byte encodings (e.g. UTF-8) this does make a
+difference, but this issue is ignored here.
 
