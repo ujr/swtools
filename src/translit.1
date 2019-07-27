@@ -1,6 +1,6 @@
 .TH TRANSLIT 1 July\ 2019 local
 .SH NAME
-translit \- transliterate or delete characters
+translit \- transliterate, squash, or delete characters
 .SH SYNOPSIS
 \fBtranslit\fP [-c] \fIsrc\fP [\fIdest\fP]
 .SH DESCRIPTION
@@ -8,8 +8,10 @@ translit \- transliterate or delete characters
 characters, and writes to standard output.
 .PP
 If \fIsrc\fP and \fIdest\fP have the same length, each character
-in the \fIsrc\fP set is mapped to the corresponding character (by
-position) in the \fIdest\fP set, all other characters are copied as is.
+in \fIsrc\fP is mapped to the corresponding character (by position)
+in \fIdest\fP, all other characters are copied as is.
+If \fIdest\fP is longer than \fIsrc\fP, excess characters in
+\fIdest\fP are ignored.
 .PP
 If \fIdest\fP is absent, all input characters in \fIsrc\fP are
 deleted.
@@ -29,6 +31,7 @@ sequences \fB\\\\\fP, \fB\\a\fP, \fB\\b\fP, \fB\\e\fP, \fB\\f\fP,
 their usual interpretation.
 .PP
 The option \fB-c\fP builds the complement of \fIsrc\fP.
+The complement is always squashed (or deleted), never mapped to \fIdest\fP.
 .SH EXAMPLE
 To convert upper case to lower:
 .nf
