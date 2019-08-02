@@ -1,0 +1,114 @@
+.TH strbuf 3 August\ 2019 local
+
+.SH NAME
+strbuf \- growable character string buffer
+
+.SH SYNOPSIS
+#include <stdarg.h>
+.br
+#include <stddef.h>
+.br
+.B #include \(dqstrbuf.h\(dq
+.PP
+int \fBstrbuf_add\fP(strbuf *\fIsp\fP, strbuf *\fIsq\fP);
+.br
+int \fBstrbuf_addc\fP(strbuf *\fIsp\fP, char \fIc\fP);
+.br
+int \fBstrbuf_addz\fP(strbuf *\fIsp\fP, const char *\fIz\fP);
+.br
+int \fBstrbuf_addb\fP(strbuf *\fIsp\fP, const char *\fIbuf\fP, size_t \fIlen\fP);
+.br
+int \fBstrbuf_addf\fP(strbuf *\fIsp\fP, const char *\fIfmt\fP, ...);
+.br
+int \fBstrbuf_addfv\fP(strbuf *\fIsp\fP, const char *\fIfmt\fP, va_list \fIap\fP);
+.PP
+int \fBstrbuf_ready\fP(strbuf *\fIsp\fP, size_t \fIwant\fP);
+.br
+void \fBstrbuf_trunc\fP(strbuf *\fIsp\fP, size_t \fIlen\fP);
+.br
+void \fBstrbuf_free\fP(strbuf *\fIsp\fP);
+.PP
+int \fBstrbuf_failed\fP(strbuf *\fIsb\fP); // macro
+.br
+char *\fBstrbuf_buffer\fP(strbuf *\fIsb\fP); // macro
+.br
+size_t \fBstrbuf_length\fP(strbuf *\fIsb\fP); // macro
+.br
+size_t \fBstrbuf_size\fP(struct *\fIsb\fP); // macro
+
+.SH DESCRIPTION
+Automatically growing character string buffers.
+Each \fBstrbuf\fP must be zero-initialized, for example
+by using an initializer like this:
+.PP
+.nf
+.RS
+strbuf x = {0};
+.RE
+.fi
+.PP
+This assigns 0 to the first field, which is the buffer pointer,
+and thereby brings the string buffer into "unallocated" state.
+Use of any of the \fBadd\fP functions (or \fBstrbuf_ready\fP)
+brings the buffer into "allocated" state, or, if a memory
+allocation fails, into "failed" state. 
+The string buffer remains in "allocated" or "failed" state
+until a call to \fBstrbuf_free\fP, which brings it back
+to "unallocated" state.
+.PP
+The \fIadd\fP functions append to the buffer:
+\fBadd\fP appends the contents of another string buffer,
+\fBaddc\fP appends a single character,
+\fBaddz\fP appends a zero terminated string, and
+\fBaddb\fP appends a byte range (ptr, len).
+Moreover, \fBaddf\fP and \fBaddfv\fP use
+.BR vsnprintf (3)
+to append a formatted string.
+.PP
+The string in a \fBstrbuf\fP is always zero-terminated and
+therefore ready to be used as a C string. To use it as a C
+string, use the \fBstrbuf_buffer\fP macro or refer to the
+\fBbuf\fP field directly.
+.PP
+The length of the string in the buffer is available through
+the \fBstrbuf_length\fP macro or by direct reference to the
+\fBlen\fP field.
+Length excludes the terminating \fB\\0\fP byte (but includes
+any internal \fB\\0\fP bytes).
+.PP
+The size of the buffer (its capacity to hold characters) is available through
+the \fBstrbuf_size\fP macro. Do \fBnot\fP directly access
+the \fIsize\fP field!
+.PP
+The \fBstrbuf_ready\fP function ensures that there is room
+in the buffer for at least \fIwant\fP additional characters.
+The \fBstrbuf_trunc\fP function truncates the buffer contents
+to the first \fIlen\fP characters (but leaves the allocated
+buffer size unchanged).
+.PP
+Where appropriate, the functions return \fB1\fP if successful
+and \fB0\fP otherwise. The only reason for a function to not
+succeed is a memory allocation failure. Instead of testing
+each return value, the string buffer can be tested for "failed"
+state at any convenient time using the \fBstrbuf_failed\fP macro
+(as with
+.BR ferror (3)
+on a \fIFILE\fP object from \fIstdio.h\fP).
+
+.SH EXAMPLE
+.nf
+#include \(dqstrbuf.h\(dq
+.PP
+strbuf x = {0}; /* required initialization */
+.PP
+strbuf_addb(&x, "Hellooo", 5);
+strbuf_addc(&x, ' ');
+strbuf_addz(&x, "World!");
+strbuf_trunc(&x, 6); /* keep only first 6 characters */
+strbuf_addf(&x, "#%d", 123);
+.PP
+if (strbuf_failed(&x)) return -1;
+printf("%s (len=%d)", x.buf, x.len); /* prints "Hello #123 (len=10)" */
+.PP
+strbuf_free(&x); /* release memory, return to "unallocated" state */
+.fi

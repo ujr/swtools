@@ -150,9 +150,26 @@ in four steps:
   3.  complement of src set (the -c option)
   4.  escapes and character ranges in the sets
 
-Both the book and the man page speak of _character_ transliteration,
-but it really is _byte by byte_ transliteration. With ASCII (and
-other one-byte-per-character encodings) this makes no difference.
-But with multi-byte encodings (e.g. UTF-8) this does make a
-difference, but this issue is ignored here.
+For the 4th step we want some "string buffer" for expanding the
+character ranges. C has no such facility, so it must be written.
+Different approaches exist, but all must maintain three pieces
+of information: a character buffer, its size, and the length of
+the string within this buffer. It might be tempting to join the
+buffer and the housekeeping (size and length) into a single
+allocation, and to hide the housekeeping part so that the buffer
+_looks like_ a regular C string (see, e.g., [growable-buf][growable-buf]
+and [sds][sds]). The downside is that such schemes potentially
+return a new buffer pointer on each append operation, and
+that such strings are easily confused with plain C strings.
+My implementation, *strbuf*, is an explicit string buffer
+with separate housekeepking.
+
+By the way, both the book and the man page speak of _character_
+transliteration, but it really is _byte by byte_ transliteration.
+With ASCII (and other one-byte-per-character encodings) this makes
+no difference. But with multi-byte encodings (e.g. UTF-8)
+this does make a difference, but I ignore it here.
+
+[sds]: https://github.com/antirez/sds
+[buf]: https://github.com/skeeto/growable-buf
 
