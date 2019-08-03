@@ -24,8 +24,8 @@ character in \fIdest\fP. For example, \fBtranslit 0-9 9\fP
 converts digit strings to the single digit 9.
 .PP
 Characters in \fIsrc\fP and \fIdest\fP represent themselves, except
-that (1) \fIc1\fP-\fIc2\fP is a shorthand for all characters in
-the ordinal range \fIc1\fP..\fIc2\fP, and (2) the backslash escape
+that \fIc1\fP-\fIc2\fP is a shorthand for all characters in
+the ordinal range \fIc1\fP..\fIc2\fP, and the backslash escape
 sequences \fB\\\\\fP, \fB\\a\fP, \fB\\b\fP, \fB\\e\fP, \fB\\f\fP,
 \fB\\n\fP, \fB\\r\fP, \fB\\t\fP, \fB\\v\fP, and \fB\\0\fP have
 their usual interpretation.
@@ -33,13 +33,25 @@ their usual interpretation.
 The option \fB-c\fP builds the complement of \fIsrc\fP.
 The complement is always squashed (or deleted), never mapped to \fIdest\fP.
 .SH EXAMPLE
-To convert upper case to lower:
+Convert upper case to lower:
 .nf
 .RS
 $ \fBtranslit\fP A-Z a-z
+Hello, World!
+\fIhello, world!\fP
 .RE
 .fi
-To discard punctuation and isolate words by spaces on each line:
+.PP
+Do a Caesar shift by 3 positions:
+.nf
+.RS
+$ \fBtranslit\fP D-ZA-C A-Z
+THE QUICK BROWN FOX JUMPED OVER THE LAZY DOG.
+\fIQEB NRFZH YOLTK CLU GRJMBA LSBO QEB IXWV ALD.\fP
+.RE
+.fi
+.PP
+Discard punctuation and isolate words by spaces on each line:
 .nf
 .RS
 $ \fBtranslit\fP -c a-zA-Z\\n " "
