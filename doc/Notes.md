@@ -27,7 +27,7 @@ C89 vs C99
 ----------
 
 **K&R C** is the original C, as described in the first edition (1978)
-of *The C Programming Language* by Kernighan and Ritschie.
+of *The C Programming Language* by Kernighan and Ritchie.
 C was standardized by ANSI in 1989, and the second edition (1988)
 of *The C Programming Language* describes this revised version
 of C, known as **ANSI C** or **C89**. As compilers added features
@@ -39,8 +39,11 @@ by your compiler. Some of the new C99 features are:
   *  the Boolean data type (`_Bool`, stdbool.h provides `bool`)
   *  mixing declarations and code (not only at start of block)
   *  variable-length arrays (length determined at runtime)
-  *  flexible array members (member array without a dimension)
-  *  variadic macros, the `offsetof` macro (from stddef.h)
+  *  [flexible array members][fam] (member array without a dimension)
+  *  variadic macros, the [offsetof][offsetof] macro (from stddef.h)
+
+[fam]: https://en.wikipedia.org/wiki/Flexible_array_member
+[offsetof]: https://en.wikipedia.org/wiki/Offsetof
 
 
 Makefiles
@@ -116,4 +119,7 @@ to dedicate some work to the public domain.
 
 The [POSIX standards](http://pubs.opengroup.org/onlinepubs/9699919799/)
 (IEEE Std 1003.1-2017), volume about *Shell & Utilities*.
+
+Kernighan and Ritchie, *The C Programming Language*, 2nd edition,
+Prentice Hall 1988, [ISBN 0131103628](https://www.amazon.com/dp/0131103628).
 

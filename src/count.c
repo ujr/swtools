@@ -4,12 +4,13 @@
 static const char *which = "lwc"; /* which counts to print */
 
 static void
-usage(const char *msg)
+usage(const char *errmsg)
 {
-  FILE *fp = msg ? stderr : stdout;
-  if (msg) fprintf(fp, "%s: %s\n", me, msg);
+  FILE *fp = errmsg ? stderr : stdout;
+  if (errmsg) fprintf(fp, "%s: %s\n", me, errmsg);
   fprintf(fp, "Usage: %s [-lwc]\n", me);
-  exit(msg ? FAILHARD : SUCCESS);
+  fprintf(fp, "Count lines, words, and bytes\n");
+  exit(errmsg ? FAILHARD : SUCCESS);
 }
 
 static int /* return num args parsed */

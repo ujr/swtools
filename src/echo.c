@@ -57,13 +57,13 @@ parseopts(int argc, char **argv, int *escapes, int *newline)
 
   for (i = 0; i < argc && argv[i]; i++) {
     const char *p = argv[i];
-    if (*p != '-') break; // no more option args
+    if (*p != '-' || streq(p, "-")) break; // no more option args
+    if (streq(p, "--")) { ++i; break; } // end of option args
     for (++p; *p; p++) {
       switch (*p) {
         case 'e': *escapes = 1; break;
         case 'n': *newline = 0; break;
         case 'h': usage(0); break;
-        case '-': return ++i; // end of option args
         default: usage("invalid option"); return -1;
       }
     }
@@ -73,10 +73,11 @@ parseopts(int argc, char **argv, int *escapes, int *newline)
 }
 
 static void
-usage(const char *msg)
+usage(const char *errmsg)
 {
-  FILE *fp = msg ? stderr : stdout;
-  if (msg) fprintf(fp, "%s: %s\n", me, msg);
+  FILE *fp = errmsg ? stderr : stdout;
+  if (errmsg) fprintf(fp, "%s: %s\n", me, errmsg);
   fprintf(fp, "Usage: %s [-e] [-n] [arguments...]\n", me);
-  exit(msg ? FAILHARD : SUCCESS);
+  fprintf(fp, "Copy arguments to standard output\n");
+  exit(errmsg ? FAILHARD : SUCCESS);
 }

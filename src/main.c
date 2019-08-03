@@ -154,26 +154,43 @@ usage(const char *fmt, ...)
     fprintf(fp, "%s: %s\n", progname, msg);
     va_end(ap);
   }
-  fprintf(fp, "Usage: %s [options] <command> [arguments]\n", progname);
-  fprintf(fp, "   or: <command> [arguments]\n");
-  fprintf(fp, " options:  -v  verbose mode\n commands:");
+  fprintf(fp, "Usage: %s [options] <command> [arguments]\n"
+              "   or: <command> [arguments]\n"
+              " options:  -v  verbose mode\n"
+              "           -h  show this help and quit\n"
+              "           -V  show version and quit\n"
+              " commands:", progname);
   for (int i=0; tools[i].name; i++)
     fprintf(fp, " %s", tools[i].name);
-  fprintf(fp, "\n arguments are command specific\n");
+  fprintf(fp, "\n arguments are command-specific\n");
 }
 
 static int
 parseopts(int argc, char **argv)
 {
-  if (argc > 0 && argv[0] && *argv[0] == '-') {
-    switch (argv[0][1]) {
-      case 'v': verbosity += 1; break;
-      case 'V': identity(0); exit(SUCCESS); break;
-      default: usage("invalid option"); return -1;
+  int i, showhelp = 0, showversion = 0;
+
+  for (i = 0; i < argc && argv[i]; i++) {
+    const char *p = argv[i];
+    if (*p != '-' || streq(p, "-")) break; // no more option args
+    if (streq(p, "--")) { ++i; break; } // end of option args
+    for (++p; *p; p++) {
+      switch (*p) {
+        case 'h': showhelp = 1; break;
+        case 'v': verbosity += 1; break;
+        case 'V': showversion = 1; break;
+        default: usage("invalid option"); return -1;
+      }
     }
-    return 1;
   }
-  return 0;
+
+  if (showhelp || showversion) {
+    identity(123);
+    if (showhelp) usage(0);
+    exit(SUCCESS);
+  }
+
+  return i; // #args parsed
 }
 
 int

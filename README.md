@@ -8,12 +8,14 @@ It can still be bought at [Amazon][amazon] or may be found
 in your local library.
 
 Going through the lessons may seem odd from a 2019 perspective,
-but I consider it a rite of passage. Here a selection of the
-Pascal from the book will be recast in working C program.
-Neither completeness nor fidelity is a goal.
+but I consider it a rite of passage. In this project a selection
+of the Pascal tools from the book will be recast as working C
+programs. Neither completeness nor fidelity is a goal.
 
-My progress through the book and notes about the individual tools
+My progress through the book, along with notes about the individual tools
 and their restatement in C can be found in [doc/Tools.md](doc/Tools.md).
+General notes not directly related to the book or the tools can be
+found in [doc/Notes.md](doc/Notes.md).
 
 
 Structure

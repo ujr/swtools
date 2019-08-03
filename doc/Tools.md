@@ -147,8 +147,8 @@ in four steps:
 
   1.  transliteration (src and dest of same length)
   2.  squash and delete (dest shorter or absent)
-  3.  complement of src set (the -c option)
-  4.  escapes and character ranges in the sets
+  3.  complement of src (the -c option)
+  4.  escapes and character ranges in src and dest
 
 For the 4th step we want some "string buffer" for expanding the
 character ranges. C has no such facility, so it must be written.
