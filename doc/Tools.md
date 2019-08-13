@@ -171,5 +171,5 @@ no difference. But with multi-byte encodings (e.g. UTF-8)
 this does make a difference, but I ignore it here.
 
 [sds]: https://github.com/antirez/sds
-[buf]: https://github.com/skeeto/growable-buf
+[growable-buf]: https://github.com/skeeto/growable-buf
 

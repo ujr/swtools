@@ -1,4 +1,7 @@
 
+General Notes
+=============
+
 
 Compiler Flags
 --------------
@@ -101,6 +104,51 @@ From <http://www.tldp.org/LDP/abs/html/standard-options.html>:
 
 Note that `-v` is used in different ways; I tend to use `-V` (capital)
 to show program version and `-v` to raise verbosity.
+
+
+Operator Precedence
+-------------------
+
+>
+    call, index, member  ()  []  ->  .
+    unary           ! ~ ++ -- + - * & (type) sizeof    (right-to-left)
+    multiplicative  *  /  %
+    additive        +  -
+    bit shift       <<  >>
+    relational      <  <=  >  >=
+    equality        ==  !=
+    bitwise AND     &
+    bitwise XOR     ^
+    bitwise OR      |
+    logical AND     &&
+    logical OR      ||
+    conditional     ?:                                 (right-to-left)
+    assignment      = += -= *= /= %= &= ^= |= <<= >>=  (right-to-left)
+    comma           ,
+
+Operators are listed in order from highest precedence (tightest binding)
+to least precedence. All operators associate left-to-right unless
+indicated otherwise. For example, 4-2+1 is 3 (not 1).
+
+
+Rounding up to multiples of 2, 4, 8, etc.
+-----------------------------------------
+
+The integer *n* can be rounded up to a multiple of 2, 4, 8 like this:
+
+>
+    (n+1)&~1
+    (n+3)&~3
+    (n+7)&~7
+
+The bitwise AND masks off the low order bits, thereby rounding _down_
+to a multiple of a power-of-two. To effect a rounding _up_ instead,
+add one less than the desired power-of-two prior to masking.
+
+The mask is created by a bitwise NOT: 3 is the two leftmost bits set,
+`~3` is all bits set except the two leftmost.
+The expression `x&~3` is independent of word size, and thus preferable
+to, e.g., `x&0xFFFC`, which assumes 16-bit words.
 
 
 References

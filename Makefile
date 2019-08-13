@@ -40,4 +40,4 @@ check: tests
 clean:
 	rm -f bin/quux obj/*.o
 
-.PHONY: all install check clean dist tools
+.PHONY: all install check clean dist tools tests

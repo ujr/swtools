@@ -70,7 +70,6 @@ int /* append formatted string to sp (va_list) */
 strbuf_addfv(strbuf *sp, const char *fmt, va_list ap)
 {
   va_list aq;
-//  size_t avail;
   int chars;
 
   /* Make a copy of ap because we may traverse the list twice (if we
@@ -78,7 +77,7 @@ strbuf_addfv(strbuf *sp, const char *fmt, va_list ap)
      matching va_end(), and that the size argument to vsnprintf()
      includes the terminating \0, whereas its return value does not. */
 
-  va_copy(aq, ap);
+  va_copy(aq, ap); /* C99 */
   chars = vsnprintf(sp->buf + sp->len, 0, fmt, aq);
   va_end(aq);
 
@@ -90,26 +89,6 @@ strbuf_addfv(strbuf *sp, const char *fmt, va_list ap)
 
   sp->len += chars;
   return 1;
-
-#if 0
-  va_copy(aq, ap);
-  avail = SIZE(sp) - sp->len;
-  chars = vsnprintf(sp->buf + sp->len, avail+1, fmt, ap);
-  if (chars < 0) goto fail;
-  if ((size_t) chars > avail) {
-    if (!strbuf_ready(sp, chars-avail)) goto nomem;
-    avail = SIZE(sp) - sp->len;
-    chars = vsnprintf(sp->buf + sp->len, avail+1, fmt, aq);
-    if (chars < 0) goto fail;
-  }
-  sp->len += chars;
-  va_end(aq);
-  return 1;
-fail:
-nomem:
-  va_end(aq);
-  return 0;
-#endif
 }
 
 void /* truncate string to exactly n <= len chars */
