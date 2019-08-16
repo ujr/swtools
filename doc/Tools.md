@@ -173,3 +173,30 @@ this does make a difference, but I ignore it here.
 [sds]: https://github.com/antirez/sds
 [growable-buf]: https://github.com/skeeto/growable-buf
 
+
+Line Input and Compare
+----------------------
+
+The next tool is *compare* for line-by-line comparison of two files.
+A function to read a line of input will be needed. There are several
+options:
+
+  1.  using a fixed size buffer: `getline(char *buf, size_t len, FILE *fp)`
+  2.  using a growable buffer (e.g., strbuf): `getline(strbuf *sp, FILE *fp)`
+  3.  using `getline(3)` from the standard library (but beware:
+      this is a GNU extension that became part of POSIX around
+      2008 and may not be available everywhere):
+      `getline(char **buf, size_t **len, FILE *fp)`
+
+The first option is simple to write but harder to use.
+Since we already have a growable string buffer implementation
+(strbuf), the second option is simple to write and simple to use.
+The third option is certainly more efficient, because it has access
+to the innards of the standard IO library.
+Will go for the second option. Return value is number of characters
+read, including the delimiter, 0 on end-of-file, -1 on error.
+
+Unlike the standard *diff* tool, the *compare* here is a plain
+line-by-line comparison and therefore may find lots of differing
+lines if only one line has been added or deleted.
+

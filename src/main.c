@@ -19,6 +19,7 @@ struct {
   { "entab", entabcmd },
   { "echo", echocmd },
   { "translit", translitcmd },
+  { "compare", comparecmd },
   { 0, 0 }
 };
 

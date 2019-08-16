@@ -68,7 +68,8 @@ to append a formatted string.
 The string in a \fBstrbuf\fP is always zero-terminated and
 therefore ready to be used as a C string. To use it as a C
 string, use the \fBstrbuf_buffer\fP macro or refer to the
-\fBbuf\fP field directly.
+\fBbuf\fP field directly. Beware that either way the string
+may be NULL.
 .PP
 The length of the string in the buffer is available through
 the \fBstrbuf_length\fP macro or by direct reference to the
@@ -76,9 +77,9 @@ the \fBstrbuf_length\fP macro or by direct reference to the
 Length excludes the terminating \fB\\0\fP byte (but includes
 any internal \fB\\0\fP bytes).
 .PP
-The size of the buffer (its capacity to hold characters) is available through
-the \fBstrbuf_size\fP macro. Do \fBnot\fP directly access
-the \fIsize\fP field!
+The size of the buffer (its capacity to hold characters) is
+available through the \fBstrbuf_size\fP macro. Do \fBnot\fP
+directly access the \fIsize\fP field!
 .PP
 The \fBstrbuf_ready\fP function ensures that there is room
 in the buffer for at least \fIwant\fP additional characters.

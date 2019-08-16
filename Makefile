@@ -18,7 +18,8 @@ install: all
 tools: bin/quux
 tests: bin/tests
 
-TOOLS = obj/copy.o obj/count.o obj/echo.o obj/detab.o obj/translit.o
+TOOLS = obj/copy.o obj/count.o obj/echo.o obj/detab.o obj/translit.o \
+  obj/compare.o
 bin/quux: obj/main.o $(TOOLS) obj/strbuf.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 

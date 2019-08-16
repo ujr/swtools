@@ -1,5 +1,5 @@
 #include <errno.h>
-#include <stdbool.h>  /* C11 */
+#include <stdbool.h>  /* C99 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,3 +42,4 @@ int detabcmd(int argc, char **argv);
 int entabcmd(int argc, char **argv);
 int echocmd(int argc, char **argv);
 int translitcmd(int argc, char **argv);
+int comparecmd(int argc, char **argv);

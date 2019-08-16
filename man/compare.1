@@ -1,0 +1,33 @@
+.TH COMPARE 1 August\ 2019 local
+
+.SH NAME
+compare \- compare files for equality
+
+.SH SYNOPSIS
+\fBcompare\fP [-q] \fIfile1\fP [\fIfile2\fP]
+
+.SH DESCRIPTION
+\fBcompare\fP performs a line-by-line comparison of \fIfile1\fP
+and \fIfile2\fP (or standard input, if \fIfile2\fP is not specified),
+printing each pair of differing lines, preceded by a line containing
+the line number and a colon.
+If the files are identical, no output is produced.
+If one file is a prefix of the other, \fBcompare\fP
+reports end of file on the shorter file.
+.PP
+The option \fB-q\fP suppresses messages to standard output
+about differing lines (quiet mode).
+.PP
+Exit status is \fB0\fP if the files are identical,
+\fB1\fP if the files differ, and \fB2\fP if there are errors.
+
+.SH EXAMPLE
+.nf
+.RS
+$ \fBcompare\fP old new
+$ \fBecho\fP Hello World | \fBcompare\fP expected
+.RE
+.fi
+
+.SH BUGS
+\fBcompare\fP can produced voluminous output for small differences.
