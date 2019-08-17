@@ -9,10 +9,8 @@
 
 static int parseopts(int argc, char **argv, bool *quiet);
 static void usage(const char *errfmt, ...);
-static FILE *openin(const char *filepath);
 static bool equal(const char *line1, const char *line2);
 static void diffmsg(int lineno, const char *line1, const char *line2);
-static int getline(strbuf *sp, int delim, FILE *fp);
 static void dumpline(const char *line, FILE *fp);
 
 int
@@ -107,17 +105,6 @@ parseopts(int argc, char **argv, bool *quiet)
   return i; // #args parsed
 }
 
-/* openin: open filepath for reading, default to stdin */
-static FILE *
-openin(const char *filepath)
-{
-  if (!filepath || streq(filepath, "-"))
-    return stdin;
-  FILE *fp = fopen(filepath, "r");
-  if (!fp) printerr(filepath);
-  return fp;
-}
-
 /* equal: compare line1 and line2, return 1 if equal */
 static bool
 equal(const char *line1, const char *line2)
@@ -133,22 +120,6 @@ diffmsg(int lineno, const char *line1, const char *line2)
   printf("Line %d:\n", lineno);
   dumpline(line1, stdout);
   dumpline(line2, stdout);
-}
-
-/* getline: append chars up to (and including) the first delim,
-   return num chars appended, 0 on EOF, -1 on error */
-static int
-getline(strbuf *sp, int delim, FILE *fp)
-{
-  int c;
-  size_t l0, l1;
-  l0 = strbuf_length(sp);
-  while ((c = getc(fp)) != EOF && c != delim) {
-    strbuf_addc(sp, c);
-  }
-  if (c == delim) strbuf_addc(sp, c);
-  l1 = strbuf_length(sp);
-  return strbuf_failed(sp) || ferror(fp) ? -1 : (int)(l1 - l0);
 }
 
 /* dumpline: show line, substitute non-printing chars */

@@ -29,48 +29,6 @@ static const char *progname;
 static const char *toolname;
 
 const char *
-basename(char **argv)
-{
-  const char *s = 0;
-  register const char *p;
-  if (argv && *argv) {
-    p = s = *argv;
-    while (*p) {
-      if (*p++ == '/') {
-        if (p) s = p; // advance
-      }
-    }
-  }
-  return (char *) s;
-}
-
-int
-scanint(const char *s, int *v)
-{
-  int neg, n;
-  const char *p;
-
-  if (!s) return 0;
-
-  p = s;
-  neg = 0;
-
-  switch (*p) {
-    case '-': neg=1; /* FALLTHRU */
-    case '+': p+=1; break;
-  }
-
-  /* compute -n to get INT_MIN without overflow, but
-     input outside INT_MIN..INT_MAX silently overflows */
-  for (n = 0; isdigit(*p); p++) {
-    n = 10 * n - (*p - '0');
-  }
-
-  if (v) *v = neg ? n : -n;
-  return p - s; // #chars scanned
-}
-
-const char *
 makeident(const char *s, const char *t)
 {
   size_t ns = s ? strlen(s) : 0;
@@ -81,45 +39,6 @@ makeident(const char *s, const char *t)
   if (s && t) p[ns] = ' ';
   if (t) strcpy(p+ns+1, t);
   return p;
-}
-
-/* print system error message to stderr */
-void
-printerr(const char *msg)
-{
-  FILE *fp = stderr;
-
-  // Syntax: progname[ toolname]: [msg: ]errno\n
-
-  fputs(progname, fp);
-
-  if (toolname && *toolname && !streq(toolname, progname)) {
-    fputc(' ', fp);
-    fputs(toolname, fp);
-  }
-
-  if (msg && *msg) {
-    fputs(": ", fp);
-    fputs(msg, fp);
-  }
-
-  if (errno || !msg || !*msg) {
-    fputs(": ", fp);
-    fputs(strerror(errno), fp);
-  }
-
-  fputc('\n', fp);
-}
-
-/* check stream error flag, print error message */
-int
-checkioerr()
-{
-  if (ferror(stdin) || ferror(stdout)) {
-    printerr(0);
-    return FAILSOFT;
-  }
-  return SUCCESS;
 }
 
 static toolfun *
@@ -201,7 +120,7 @@ main(int argc, char **argv)
   int r;
 
   toolname = 0;
-  progname = basename(argv);
+  progname = getprog(argv);
   if (!progname) return FAILHARD;
 
   cmd = findtool(progname);

@@ -20,7 +20,7 @@ tests: bin/tests
 
 TOOLS = obj/copy.o obj/count.o obj/echo.o obj/detab.o obj/translit.o \
   obj/compare.o
-bin/quux: obj/main.o $(TOOLS) obj/strbuf.o
+bin/quux: obj/main.o $(TOOLS) obj/utils.o obj/strbuf.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 DEPS = src/common.h src/strbuf.h src/tests.h
@@ -28,7 +28,7 @@ obj/%.o: src/%.c $(DEPS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 TESTS = obj/strbuf_test.o obj/strbuf.o
-bin/tests: obj/tests.o $(TESTS)
+bin/tests: obj/tests.o obj/utils.o $(TESTS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 dist: clean

@@ -1,5 +1,12 @@
 /* strbuf.h - growable string buffer */
 
+#pragma once
+#ifndef STRBUF_H
+#define STRBUF_H
+
+#include <stdarg.h>
+#include <stddef.h>
+
 typedef struct strbuf {
   char *buf;    /* pointer to character buffer */
   size_t len;   /* string length (excluding terminating \0) */
@@ -27,3 +34,4 @@ extern int strbuf_ready(strbuf *sp, size_t want);
 extern void strbuf_trunc(strbuf *sp, size_t len);
 extern void strbuf_free(strbuf *sp);
 
+#endif

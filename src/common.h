@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "strbuf.h"
+
 #define VERSION "0.1"
 #define RELEASE "0.1.0"
 
@@ -29,8 +31,11 @@ int verbosity;   /* normally 0=silenty */
 
 #define streq(s,t) (0==strcmp((s),(t)))
 
-const char *basename(char **argv);
+const char *getprog(char **argv);
 int scanint(const char *s, int *v);
+FILE *openin(const char *filepath);
+int getline(strbuf *sp, int delim, FILE *fp);
+int getln(char **buf, size_t *len, FILE *fp);
 void printerr(const char *msg);
 int checkioerr();
 
