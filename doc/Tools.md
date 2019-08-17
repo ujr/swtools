@@ -200,3 +200,15 @@ Unlike the standard *diff* tool, the *compare* here is a plain
 line-by-line comparison and therefore may find lots of differing
 lines if only one line has been added or deleted.
 
+**Exercise 3-5** asks what happens if *compare* is asked to
+compare a file with itself, that is: **compare _f_ _f_**  
+If _f_ is a named file, this should and will work: _f_ is
+opened twice, each open file has its own file pointer, and
+its own current offset. If _f_ refers to the standard input
+(can be achieved with **compare - -** or **foo | compare -**),
+an already opened file, then there is only one file pointer
+and only one current offset, so that *compare* would compare
+odd numbered lines against even numbered lines.
+This special case is recognized and handled specially
+by defining standard input to be identical to itself.
+

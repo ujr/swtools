@@ -41,8 +41,7 @@ comparecmd(int argc, char **argv)
   fn2 = argc > 1 ? *argv++ : "-";
 
   if (streq(fn1, "-") && streq(fn2, "-")) {
-    usage("only one of the files can be standard input");
-    return FAILHARD;
+    return 0;  /* identical */
   }
 
   fp1 = openin(fn1);
