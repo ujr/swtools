@@ -48,3 +48,4 @@ int entabcmd(int argc, char **argv);
 int echocmd(int argc, char **argv);
 int translitcmd(int argc, char **argv);
 int comparecmd(int argc, char **argv);
+int includecmd(int argc, char **argv);

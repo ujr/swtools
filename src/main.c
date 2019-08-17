@@ -20,6 +20,7 @@ struct {
   { "echo", echocmd },
   { "translit", translitcmd },
   { "compare", comparecmd },
+  { "include", includecmd },
   { 0, 0 }
 };
 

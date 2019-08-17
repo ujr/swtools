@@ -1,0 +1,33 @@
+.TH INCLUDE 1 August\ 2019 local
+
+.SH NAME
+include \- file inclusion
+
+.SH SYNOPSIS
+\fBinclude\fP [\fIfile\fP]
+
+.SH DESCRIPTION
+\fBinclude\fP copies \fIfile\fP to standard output unchanged,
+except that each line beginning
+.PP
+.nf
+.RS
+#include "\fIfilename\fP"
+.RE
+.fi
+.PP
+is replaced by the contents of the file whose name is \fIfilename\fP.
+Include files may contain further \fB#include\fP lines, to arbitrary depth.
+If \fIfile\fP is not specified, standard input is read instead.
+
+.SH EXAMPLE
+.nf
+#include "globals.h"
+int main() {
+  return THEANSWER;
+}
+.fi
+
+.SH BUGS
+A file that includes itself will not be diagnosed,
+but will eventually cause something to break.
