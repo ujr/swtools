@@ -1,0 +1,28 @@
+.TH CONCAT 1 August\ 2019 local
+
+.SH NAME
+concat \- concatenate files
+
+.SH SYNOPSIS
+\fBconcat\fP [\fIfile\fP] ...
+
+.SH DESCRIPTION
+\fBconcat\fP writes the contents of each of its file arguments
+in turn to its standard output, thus concatenating them into
+one larger file. Since \fBconcat\fP performs no reformatting
+or interpretation of the input files, it is useful for displaying
+the contents of a file.
+
+.SH EXAMPLE
+To examine a file:
+.nf
+.RS
+$ \fBconcat\fP file.txt
+.RE
+.fi
+To adorn standard input with a head and a foot:
+.nf
+.RS
+$ \fBconcat\fP head.txt \- foot.txt
+.RE
+.fi

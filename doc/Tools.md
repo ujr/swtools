@@ -212,3 +212,35 @@ odd numbered lines against even numbered lines.
 This special case is recognized and handled specially
 by defining standard input to be identical to itself.
 
+
+File Inclusion
+--------------
+
+The *include* tool copies input to standard output, replacing
+any line beginning `#include "filename"` with the contents of
+_filename_, which can itself include other files. This is exactly
+like the `#include` mechanism of the C preprocessor. It can be
+used to stitch files together from smaller files.
+
+
+File Concatenation
+------------------
+
+The *concat* tool concatenates each file argument, in order,
+to standard output. It is similar to the *copy* tool we started
+with, except that here we have to open and close the files listed
+as arguments. If no arguments are specified, copy standard input
+to standard output, as does the *copy* tool. Resist temptation
+to merge *concat* and *copy* into one tool, because the latter
+might be generalized into another way (namely to copy to a newly
+created file instead of standard output).
+
+An implementation of the standard *cat* tool (here called *concat*)
+serves as an example in K&amp;R (Section 7.6 in the 2nd edition).
+It is similar to the Pascal code in *Software Tools*. And since
+there's not too much room for variation, my implementation is similar too.
+
+(The GNU version of *cat* has a number of options to show line
+ends, non-printing characters, squeeze runs of empty lines, etc.
+These are not part of POSIX, however.)
+

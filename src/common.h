@@ -49,3 +49,4 @@ int echocmd(int argc, char **argv);
 int translitcmd(int argc, char **argv);
 int comparecmd(int argc, char **argv);
 int includecmd(int argc, char **argv);
+int concatcmd(int argc, char **argv);

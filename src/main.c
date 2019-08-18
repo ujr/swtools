@@ -21,6 +21,7 @@ struct {
   { "translit", translitcmd },
   { "compare", comparecmd },
   { "include", includecmd },
+  { "concat", concatcmd },
   { 0, 0 }
 };
 
