@@ -1,0 +1,42 @@
+.TH PRINT 1 August\ 2019 local
+
+.SH NAME
+print \- dump arbitrary input to standard output
+
+.SH SYNOPSIS
+\fBprint\fP [options] [\fIfile\fP] ...
+
+.SH DESCRIPTION
+\fBprint\fP dumps arbitrary files to the standard output,
+replacing non-printing characters (bytes) by escape sequences
+and folding long lines.
+.PP
+The option \fB-a\fP enables ANSI terminal colors, \fB-A\fP disables it.
+By default, colors are enabled if output is to a terminal.
+.PP
+The option \fB-e\fP marks end-of-lines with a \fB$\fP (dollor) sign.
+.PP
+The option \fB-l\fP prefixes lines with the line number.
+.PP
+The option \fB-o\fP prefixes lines with the byte offset
+from the beginning of the file of the first character on the line.
+.PP
+The option \fB-n\fP escapes newlines instead of interpreting them
+as newlines.
+.PP
+The option \fB-x\fP emits hex escapes (\\07\\08\\0C\\0A\\0D\\09\\0B\\00)
+for what by default is emitted as C escapes (\\a\\b\\f\\n\\r\\t\\v\\0).
+
+.SH EXAMPLE
+.nf
+$ \fBecho\fP -e '\\a\\bx' | \fBprint\fP -olex
+00000000 0001 \\07\\08x$
+00000004 0002
+.fi
+
+.SH BUGS
+Lines are always folded after 72 characters; there is no way
+to change this value.
+.br
+There is no way to distinguish a verbatim backslash from
+an escape sequence backslash, other than by colour.

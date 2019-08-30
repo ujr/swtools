@@ -244,3 +244,18 @@ there's not too much room for variation, my implementation is similar too.
 ends, non-printing characters, squeeze runs of empty lines, etc.
 These are not part of POSIX, however.)
 
+
+File Printing
+-------------
+
+The book's *print* tool is intended to "print" some files with top
+and bottom margins, a heading line, and filling the last page with
+blank lines before beginning the next file.
+
+Here instead I write a tool (with the same name) that prints
+arbitrary files to standard output, replacing non-printing
+characters by escape sequences, and folding long lines.
+Optionally, it can mark the end-of-line (useful if lines end
+with white space), prefix line numbers or byte offsets.
+It is somewhat similar to the standard *od* file dump tool.
+

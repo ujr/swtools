@@ -22,6 +22,7 @@ struct {
   { "compare", comparecmd },
   { "include", includecmd },
   { "concat", concatcmd },
+  { "print", printcmd },
   { 0, 0 }
 };
 

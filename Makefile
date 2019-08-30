@@ -19,7 +19,7 @@ tools: bin/quux
 tests: bin/tests
 
 TOOLS = obj/copy.o obj/count.o obj/echo.o obj/detab.o obj/translit.o \
-  obj/compare.o obj/include.o obj/concat.o
+  obj/compare.o obj/include.o obj/concat.o obj/print.o
 bin/quux: obj/main.o $(TOOLS) obj/utils.o obj/strbuf.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
