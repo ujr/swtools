@@ -1,14 +1,19 @@
 .TH COPY 1 July\ 2019 local
 .SH NAME
-copy \- copy standard input to standard output
+copy \- copy an existing file (or stdin) to a new file (or stdout)
 .SH SYNOPSIS
-\fBcopy\fP
+\fBcopy\fP [\fIinfile\fP [\fIoutfile\fP]]
 .SH DESCRIPTION
-\fBcopy\fP copies standard input to standard output unchanged.
-It is useful for copying from a terminal to a file, from a file
-to a file, or even from terminal to terminal. It may be used
-for displaying the contents of a file, without interpretation
-or formatting, by copying from a file to terminal.
+\fBcopy\fP copies the contents of \fIinfile\fP to \fIoutfile\fP
+unchanged. If \fIoutfile\fP exists, it is truncated to length zero,
+otherwise it is created.
+If \fIoutfile\fP is not specified, it defaults to standard output.
+If \fIinfile\fP is not specified, it defaults to standard input.
+.PP
+The \fBcopy\fP tool is useful for copying from a terminal to a file,
+from a file to another file, or even from terminal to terminal.
+It may be used for displaying the contents of a file, without
+interpretation or formatting, by copying from a file to terminal.
 .SH EXAMPLE
 To echo lines typed at your terminal:
 .PP

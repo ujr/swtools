@@ -1,7 +1,6 @@
 
 #include "common.h"
 
-static void filecopy(FILE *ifp, FILE *ofp);
 static int parseopts(int argc, char **argv);
 
 int
@@ -35,15 +34,6 @@ concatcmd(int argc, char **argv)
   }
 
   return SUCCESS;
-}
-
-static void
-filecopy(FILE *ifp, FILE *ofp)
-{
-  int c;
-  while ((c = getc(ifp)) != EOF) {
-    putc(c, ofp);
-  }
 }
 
 static int

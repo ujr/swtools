@@ -48,15 +48,37 @@ scanint(const char *s, int *v)
   return p - s; // #chars scanned
 }
 
-/* openin: open filepath for reading, default to stdin */
+/* openin: open existing file for reading, default to stdin */
 FILE *
 openin(const char *filepath)
 {
   if (!filepath || streq(filepath, "-"))
     return stdin;
-  FILE *fp = fopen(filepath, "r");
+  FILE *fp = fopen(filepath, "rb");
   if (!fp) printerr(filepath);
   return fp;
+}
+
+/* openout: open file for writing, truncate if exists, default to stdout */
+FILE *
+openout(const char *filepath)
+{
+  if (!filepath || streq(filepath, "-"))
+    return stdout;
+  FILE *fp = fopen(filepath, "wb");
+  if (!fp) printerr(filepath);
+  return fp;
+}
+
+/* filecopy: copy file ifp to file ofp */
+void
+filecopy(FILE *ifp, FILE *ofp)
+{
+  /* TODO try fread/fwrite with a buffer of BUFSIZ (stdio.h) */
+  int c;
+  while ((c = getc(ifp)) != EOF) {
+    putc(c, ofp);
+  }
 }
 
 /* getline: append chars up to (and including) the first delim,

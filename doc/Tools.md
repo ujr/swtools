@@ -8,7 +8,7 @@ Brian W. Kernighan and P. J. Plauger,
 
 
 Tools in the book but not implemented here:
-*overstrike*, *compress*, *expand*
+*overstrike*, *compress*, *expand*, *archive*
 
 
 Good Programs
@@ -76,6 +76,11 @@ input to standard output (pp. 7-12). The translation to C
 is straightforward, especially because the concept of
 standard input and output is native to C.
 
+The *copy* tool was amended to accept optional arguments
+that specify an input file (must exist) and on output file
+(will be created or truncated); it therefore subsumes
+*makecopy* from the book (pp. 83-85).
+
 
 Counting Bytes, Words, Lines
 ----------------------------
@@ -103,8 +108,6 @@ the given column.
 
 Both *detab* and *entab* are in the same file *detab.c*
 because they share a lot of code.
-
-The *overstrike* tool I skip.
 
 
 Compress and Expand

@@ -34,6 +34,8 @@ int verbosity;   /* normally 0=silenty */
 const char *getprog(char **argv);
 int scanint(const char *s, int *v);
 FILE *openin(const char *filepath);
+FILE *openout(const char *filepath);
+void filecopy(FILE *fin, FILE *fout);
 int getline(strbuf *sp, int delim, FILE *fp);
 int getln(char **buf, size_t *len, FILE *fp);
 void printerr(const char *msg);
