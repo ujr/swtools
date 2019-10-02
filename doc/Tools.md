@@ -240,8 +240,9 @@ created file instead of standard output).
 
 An implementation of the standard *cat* tool (here called *concat*)
 serves as an example in K&amp;R (Section 7.6 in the 2nd edition).
-It is similar to the Pascal code in *Software Tools*. And since
-there's not too much room for variation, my implementation is similar too.
+It is similar to the Pascal code in *Software Tools*.
+And since there's not too much room for variation, my implementation
+is similar too.
 
 (The GNU version of *cat* has a number of options to show line
 ends, non-printing characters, squeeze runs of empty lines, etc.
@@ -261,4 +262,26 @@ characters by escape sequences, and folding long lines.
 Optionally, it can mark the end-of-line (useful if lines end
 with white space), prefix line numbers or byte offsets.
 It is somewhat similar to the standard *od* file dump tool.
+
+
+Sorting
+-------
+
+Bubble sort [p.109] is simple, well-known, but slow (running
+time grows as _n_ squared when _n_ is the input size).
+Shell sort [p.110] is more complex, faster, and like Bubble sort,
+it requires no auxiliary memory; its details are intricate
+and for a real-world application a good library routine
+should be preferred over a home-grown implementation.
+Quicksort [p.117] runs on average in _n_ log _n_ time and
+is remarkably simple when described recursively; other than
+Shell sort, it requires a small amount of auxiliary memory,
+either implicitly in the call stack, or with an explicit stack.
+
+In *src/sorting.c* the algorithms are restated in C, and
+a *make check* will run a speed comparison. On a very small
+array, Bubble sort is good because it has little overhead,
+but its quadratic time complexity soon becomes a pain.
+For a real-world application, consider using the C library's
+*qsort* routine or a specialised sorting library.
 
