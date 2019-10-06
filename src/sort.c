@@ -1,4 +1,5 @@
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <setjmp.h>
 
@@ -25,14 +26,20 @@ static void writelines(struct lines *plines, FILE *fp);
 static void freelines(struct lines *plines);
 static void quicksort(size_t *v, size_t lo, size_t hi, const char *linebuf);
 
+static int parseopts(int argc, char **argv, bool *reverse);
+static void usage(const char *errmsg);
+
+static bool reverse = false;
+
 int
 sortcmd(int argc, char **argv)
 {
   int r;
   struct lines lines = { 0, 0 }; // must zero-init for buf.h
 
-  UNUSED(argc);
-  UNUSED(argv);
+  r = parseopts(argc, argv, &reverse);
+  if (r < 0) return FAILHARD;
+  SHIFTARGS(argc, argv, r);
 
   if (setjmp(bufjump)) {
     printerr("input too big to sort");
@@ -108,11 +115,13 @@ sortlines(struct lines *plines)
 static void /* write lines in linepos-order to fp */
 writelines(struct lines *plines, FILE *fp)
 {
-  size_t i, j;
+  size_t i, j, k, n;
   const char *s;
-  for (i = 0; i < buf_size(plines->linepos); i++) {
-    j = plines->linepos[i];
-    s = plines->linebuf + j;
+  n = buf_size(plines->linepos);
+  for (i = 0; i < n; i++) {
+    j = reverse ? (n-i)-1 : i;
+    k = plines->linepos[j];
+    s = plines->linebuf + k;
     fputs(s, fp);
   }
 }
@@ -167,5 +176,43 @@ compare(const size_t *v, size_t i, size_t j, const char *linebuf)
   const char *s = linebuf + v[i];
   const char *t = linebuf + v[j];
   return strcmp(s, t);
+}
+
+/* Options and usage */
+
+static int
+parseopts(int argc, char **argv, bool *reverse)
+{
+  int i, showhelp = 0;
+
+  for (i = 1; i < argc && argv[i]; i++) {
+    const char *p = argv[i];
+    if (*p != '-' || streq(p, "-")) break; /* no more option args */
+    if (streq(p, "--")) { ++i; break; } /* end of option args */
+    for (++p; *p; p++) {
+      switch (*p) {
+        case 'r': *reverse = 1; break;
+        case 'h': showhelp = 1; break;
+        default: usage("invalid option"); return -1;
+      }
+    }
+  }
+
+  if (showhelp) {
+    usage(0);
+    exit(SUCCESS);
+  }
+
+  return i; /* #args parsed */
+}
+
+static void
+usage(const char *errmsg)
+{
+  FILE *fp = errmsg ? stderr : stdout;
+  if (errmsg) fprintf(fp, "%s: %s\n", me, errmsg);
+  fprintf(fp, "Usage: %s [-r]\n", me);
+  fprintf(fp, "Sort text lines\n");
+  fprintf(fp, "Options: -r reverse sort\n");
 }
 

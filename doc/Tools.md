@@ -307,3 +307,8 @@ This design precludes NUL in the input. To allow null, we could
 explicitly record starting position *and* length of each line
 in *linebuf*.
 
+Exercise 4-6: reverse sorting (option `-r`) is best implemented
+in *compare* (all order-defining logic in one place) or
+in *writelines* (very simple and efficient) (in the book
+those two methods are called *compare* and *ptext*).
+
