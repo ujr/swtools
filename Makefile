@@ -19,7 +19,7 @@ tools: bin/quux
 tests: bin/tests
 
 TOOLS = obj/copy.o obj/count.o obj/echo.o obj/detab.o obj/translit.o \
-  obj/compare.o obj/include.o obj/concat.o obj/print.o
+  obj/compare.o obj/include.o obj/concat.o obj/print.o obj/sort.o
 bin/quux: obj/main.o $(TOOLS) obj/utils.o obj/strbuf.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
@@ -27,7 +27,8 @@ DEPS = src/common.h src/strbuf.h src/tests.h
 obj/%.o: src/%.c $(DEPS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-TESTS = obj/strbuf_test.o obj/strbuf.o \
+TESTS = obj/buf_test.o \
+        obj/strbuf_test.o obj/strbuf.o \
         obj/sorting_test.o obj/sorting.o
 bin/tests: obj/tests.o obj/utils.o $(TESTS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)

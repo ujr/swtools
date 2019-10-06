@@ -151,6 +151,43 @@ The expression `x&~3` is independent of word size, and thus preferable
 to, e.g., `x&0xFFFC`, which assumes 16-bit words.
 
 
+Limiting Resources
+------------------
+
+It may be useful to limit process resources for testing.
+For example, a tool can be run with very limited memory.
+
+Unix provides the getrlimit(2) and setrlimit(2) syscalls,
+as well as the now obsolete ulimit(2) syscall for setting
+user resource limits. The *bash* exposes this functionality
+through the **ulimit** built-in command.
+
+>
+    ulimit -a              show all current limits (and units)
+    ulimit -d 1024         limit data segment (memory) to 1M
+    ulimit -s 32           limit stack size to 32K
+    ulimit -u 5            user cannot have more then 5 processes
+
+Note that a non-priviledged process cannot raise limits!  
+(To get out: exit your shell/terminal and open a new one.)
+
+
+Markdown
+--------
+
+Markdown is a plain text formatting syntax widely used
+for README files and the like. The idea is that you write
+plain text following a very few syntax rules, and then
+a software tool will convert it to nicely looking HTML
+(from markdown to markup). GitHub recognises a few extra
+features, known as “GitHub Flavored Markdown” (or GFM).
+Online previewers and even editors exist.
+
+ * <https://daringfireball.net/projects/markdown/>
+ * <https://github.github.com/gfm/>
+ * <https://jbt.github.io/markdown-editor/>
+
+
 References
 ----------
 

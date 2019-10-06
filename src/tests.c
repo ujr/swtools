@@ -6,6 +6,7 @@
 
 #define UNUSED(x) (void)(x)
 
+extern int buf_test(int *numpass, int *numfail);
 extern int strbuf_test(int *numpass, int *numfail);
 extern int sorting_test(int *numpass, int *numfail);
 
@@ -20,13 +21,21 @@ main(int argc, char **argv)
   int count_pass = 0;
   int count_fail = 0;
 
+  /* buf.h */
   numpass = numfail = 0;
-  sorting_test(&numpass, &numfail);
+  buf_test(&numpass, &numfail);
   count_pass += numpass;
   count_fail += numfail;
 
+  /* strbuf.{c,h} */
   numpass = numfail = 0;
   strbuf_test(&numpass, &numfail);
+  count_pass += numpass;
+  count_fail += numfail;
+
+  /* sorting.c */
+  numpass = numfail = 0;
+  sorting_test(&numpass, &numfail);
   count_pass += numpass;
   count_fail += numfail;
 

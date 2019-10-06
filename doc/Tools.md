@@ -267,6 +267,12 @@ It is somewhat similar to the standard *od* file dump tool.
 Sorting
 -------
 
+Chapter 4 develops a tool to sort the lines in text files,
+much like the standard Unix *sort* tool. We need a sorting
+algorithm, a definition for ordering lines and characters,
+input and output routines, and a way to cope with *big* files
+(larger than fit into memory).
+
 Bubble sort [p.109] is simple, well-known, but slow (running
 time grows as _n_ squared when _n_ is the input size).
 Shell sort [p.110] is more complex, faster, and like Bubble sort,
@@ -284,4 +290,20 @@ array, Bubble sort is good because it has little overhead,
 but its quadratic time complexity soon becomes a pain.
 For a real-world application, consider using the C library's
 *qsort* routine or a specialised sorting library.
+
+The first approach at the *sort* tool assumes that the whole
+input fits into memory and thus an internal sort can be used.
+
+ * Input lines is read into one character array *linebuf*,
+   separated by NUL bytes.
+ * A separate array *linepos* contains indices to the beginning
+   of each line in *linebuf*.
+ * Only *linepos* needs to be sorted, not the variable-length lines.
+ * The size of the two arrays is not known until after the input
+   has been read; the public domain [buf.h][growable-buf] header-only
+   library will be used to implement growable arrays.
+
+This design precludes NUL in the input. To allow null, we could
+explicitly record starting position *and* length of each line
+in *linebuf*.
 

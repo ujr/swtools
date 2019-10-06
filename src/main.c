@@ -23,6 +23,7 @@ struct {
   { "include", includecmd },
   { "concat", concatcmd },
   { "print", printcmd },
+  { "sort", sortcmd },
   { 0, 0 }
 };
 
