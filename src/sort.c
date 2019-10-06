@@ -83,6 +83,13 @@ appendline(char **buf, FILE *fp)
   }
   if (c == delim) buf_push(*buf, delim);
   n1 = buf_size(*buf);
+
+  /* fix incomplete last line */
+  if (c == EOF && n1 > n0 && buf_peek(*buf) != delim) {
+    buf_push(*buf, delim);
+    n1 += 1;
+  }
+
   buf_push(*buf, 0); /* terminate string */
 
   return ferror(fp) ? -1 : (int)(n1-n0);

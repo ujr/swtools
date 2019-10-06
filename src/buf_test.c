@@ -70,13 +70,15 @@ buf_test(int *numpass, int *numfail)
   TEST("trunc 100", buf_capacity(ai) == 100);
   buf_free(ai);
 
-  /* buf_pop() */
+  /* buf_pop(), buf_peek() */
   buf_push(a, 1.1);
   buf_push(a, 1.2);
   buf_push(a, 1.3);
   buf_push(a, 1.4);
+  TEST("peek 4", buf_peek(a) == (float) 1.4f);
   TEST("size 4", buf_size(a) == 4);
   TEST("pop 3", buf_pop(a) == (float) 1.4f);
+  TEST("peek 3", buf_peek(a) == (float) 1.3f);
   buf_trunc(a, 3);
   TEST("size 3", buf_size(a) == 3);
   TEST("pop 2", buf_pop(a) == (float) 1.3f);
