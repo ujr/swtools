@@ -2,10 +2,9 @@
 Software Tools
 ==============
 
-Inspired and largely taken from: 
-Brian W. Kernighan and P. J. Plauger, 
+Inspired and largely taken from:
+Brian W. Kernighan and P. J. Plauger,
 *Software Tools in Pascal*, Addison-Wesley, 1981.
-
 
 Tools in the book but not implemented here:
 *overstrike*, *compress*, *expand*, *archive*
@@ -16,10 +15,10 @@ Good Programs
 
 Good quality programs require [p.2]:
 
-  *  good design -- easy to maintain and modify
-  *  human engineering -- convenient to use
-  *  reliability -- you get the right answers
-  *  efficiency -- you can afford to use them
+  * good design -- easy to maintain and modify
+  * human engineering -- convenient to use
+  * reliability -- you get the right answers
+  * efficiency -- you can afford to use them
 
 Readability is the best criterion of program quality: if it is
 hard to read, then it is hardly good [p.28].
@@ -28,6 +27,17 @@ hard to read, then it is hardly good [p.28].
 at boundaries (where bugs usually hide). You must know in advance
 the answer each test is supposed to produce: if you don't, you're
 *experimenting*, *not testing* [p.19].
+
+Further **guiding principles** and **best practices** from the book
+(some have modern names, given in parentheses):
+
+  * “there is great temptation to add more and more features” [p.80]
+    (also known as _creaping featurism_)
+  * whe n an option is left unspecified, this is never an error;
+    (options are optional) instead choose some default value and
+    “try not to surprise your users” [p.80]
+    (the _principle of least surprise_)
+  * “people cost a great deal more than machines” [p.82]
 
 
 Manual Pages
@@ -148,10 +158,10 @@ The tool *translit* is analogous to the standard Unix *tr* command.
 It is the first substantial program in the book and will be built
 in four steps:
 
-  1.  transliteration (src and dest of same length)
-  2.  squash and delete (dest shorter or absent)
-  3.  complement of src (the -c option)
-  4.  escapes and character ranges in src and dest
+  1. transliteration (src and dest of same length)
+  2. squash and delete (dest shorter or absent)
+  3. complement of src (the -c option)
+  4. escapes and character ranges in src and dest
 
 For the 4th step we want some "string buffer" for expanding the
 character ranges. C has no such facility, so it must be written.
@@ -184,12 +194,12 @@ The next tool is *compare* for line-by-line comparison of two files.
 A function to read a line of input will be needed. There are several
 options:
 
-  1.  using a fixed size buffer: `getline(char *buf, size_t len, FILE *fp)`
-  2.  using a growable buffer (e.g., strbuf): `getline(strbuf *sp, FILE *fp)`
-  3.  using `getline(3)` from the standard library (but beware:
-      this is a GNU extension that became part of POSIX around
-      2008 and may not be available everywhere):
-      `getline(char **buf, size_t **len, FILE *fp)`
+  1. using a fixed size buffer: `getline(char *buf, size_t len, FILE *fp)`
+  2. using a growable buffer (e.g., strbuf): `getline(strbuf *sp, FILE *fp)`
+  3. using `getline(3)` from the standard library (but beware:
+     this is a GNU extension that became part of POSIX around
+     2008 and may not be available everywhere):
+     `getline(char **buf, size_t **len, FILE *fp)`
 
 The first option is simple to write but harder to use.
 Since we already have a growable string buffer implementation
@@ -273,13 +283,13 @@ algorithm, a definition for ordering lines and characters,
 input and output routines, and a way to cope with *big* files
 (larger than fit into memory).
 
-Bubble sort [p.109] is simple, well-known, but slow (running
+**Bubble sort** [p.109] is simple, well-known, but slow (running
 time grows as _n_ squared when _n_ is the input size).
-Shell sort [p.110] is more complex, faster, and like Bubble sort,
+**Shell sort** [p.110] is more complex, faster, and like Bubble sort,
 it requires no auxiliary memory; its details are intricate
 and for a real-world application a good library routine
 should be preferred over a home-grown implementation.
-Quicksort [p.117] runs on average in _n_ log _n_ time and
+**Quicksort** [p.117] runs on average in _n_ log _n_ time and
 is remarkably simple when described recursively; other than
 Shell sort, it requires a small amount of auxiliary memory,
 either implicitly in the call stack, or with an explicit stack.
@@ -291,23 +301,34 @@ but its quadratic time complexity soon becomes a pain.
 For a real-world application, consider using the C library's
 *qsort* routine or a specialised sorting library.
 
+> The book on *The AWK Programming Language* has an excellent
+> section on Insertion Sort, Quicksort, and Heapsort, along
+> with hints on testing sort algorithms:
+>
+> * the empty input (length 0)
+> * a single item (length 1)
+> * _n_ random items
+> * _n_ sorted items
+> * _n_ reverse-sorted items
+> * _n_ identical items
+
 The first approach at the *sort* tool assumes that the whole
 input fits into memory and thus an internal sort can be used.
 
- * Input lines is read into one character array *linebuf*,
-   separated by NUL bytes.
- * A separate array *linepos* contains indices to the beginning
-   of each line in *linebuf*.
- * Only *linepos* needs to be sorted, not the variable-length lines.
- * The size of the two arrays is not known until after the input
-   has been read; the public domain [buf.h][growable-buf] header-only
-   library will be used to implement growable arrays.
+  * Input lines are read into one character array *linebuf*,
+    separated by NUL bytes.
+  * A separate array *linepos* contains indices to the beginning
+    of each line in *linebuf*.
+  * Only *linepos* needs to be sorted, not the variable-length lines.
+  * The size of the two arrays is not known until after the input
+    has been read; the public domain [buf.h][growable-buf] header-only
+    library will be used to implement growable arrays.
 
 This design precludes NUL in the input. To allow null, we could
 explicitly record starting position *and* length of each line
 in *linebuf*.
 
-Exercise 4-6: reverse sorting (option `-r`) is best implemented
+**Exercise 4-6:** reverse sorting (option `-r`) is best implemented
 in *compare* (all order-defining logic in one place) or
 in *writelines* (very simple and efficient) (in the book
 those two methods are called *compare* and *ptext*).

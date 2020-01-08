@@ -17,9 +17,7 @@ bubblesort(int v[], int n)
   for (i = n-1; i > 0; i--) {
     for (j = 0; j < i; j++) {
       if (v[j] > v[j+1]) { /* compare */
-        int t = v[j]; /* swap */
-        v[j] = v[j+1];
-        v[j+1] = t;
+        swap(v, j, j+1);   /* swap */
       }
     }
   }
@@ -36,9 +34,7 @@ shellsort(int v[], int n)
     for (i = gap; i < n; i++) { /* iterate elements */
       for (j = i-gap; j >= 0; j -= gap) { /* ... */
         if (v[j] > v[j+gap]) { /* compare */
-          int t = v[j]; /* swap */
-          v[j] = v[j+gap];
-          v[j+gap] = t;
+          swap(v, j, j+gap);   /* swap */
         }
         else break; /* v[j-gap] and v[j] already in order */
       }

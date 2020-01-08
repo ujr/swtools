@@ -121,6 +121,7 @@ strbuf_test(int *numpass, int *numfail)
   INFO("size=%zu, len=%zu", SIZE(sp), LEN(sp));
   strbuf_free(sp);
 
+#if ALLOC_TILL_FAIL
   /* Allocating until memory failure: */
   while (!strbuf_failed(sp)) {
     strbuf_addz(sp, "Appending zero-terminated string until memory failure\n");
@@ -128,6 +129,7 @@ strbuf_test(int *numpass, int *numfail)
   TEST("alloc until failure", INVARIANTS(sp));
   INFO("size=%zu, len=%zu, state is failed", SIZE(sp), LEN(sp));
   strbuf_free(sp);
+#endif
   
   if (numpass) *numpass = count_pass;
   if (numfail) *numfail = count_fail;

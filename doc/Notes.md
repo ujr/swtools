@@ -6,11 +6,11 @@ General Notes
 Compiler Flags
 --------------
 
-  *  `-Wall` enable all warnings
-  *  `-Wextra` enable some extra warnings (not included in `-Wall`)
-  *  `-g3` include lots of debug information
-  *  `-Os` optimize for code size (implies `-O2` but
-     disables optimizations that could increase code size)
+  * `-Wall` enable all warnings
+  * `-Wextra` enable some extra warnings (not included in `-Wall`)
+  * `-g3` include lots of debug information
+  * `-Os` optimize for code size (implies `-O2` but
+    disables optimizations that could increase code size)
 
 Generally, options and arguments can be mixed. Sometimes, however,
 parameter ordering is relevant:
@@ -38,12 +38,12 @@ C was standardized again in 1999, creating the **C99** dialect.
 Today (2019) it is probably save to assume that C99 is supported
 by your compiler. Some of the new C99 features are:
 
-  *  C++ style line comments: `// comment`
-  *  the Boolean data type (`_Bool`, stdbool.h provides `bool`)
-  *  mixing declarations and code (not only at start of block)
-  *  variable-length arrays (length determined at runtime)
-  *  [flexible array members][fam] (member array without a dimension)
-  *  variadic macros, the [offsetof][offsetof] macro (from stddef.h)
+  * C++ style line comments: `// comment`
+  * the Boolean data type (`_Bool`, stdbool.h provides `bool`)
+  * mixing declarations and code (not only at start of block)
+  * variable-length arrays (length determined at runtime)
+  * [flexible array members][fam] (member array without a dimension)
+  * variadic macros, the [offsetof][offsetof] macro (from stddef.h)
 
 [fam]: https://en.wikipedia.org/wiki/Flexible_array_member
 [offsetof]: https://en.wikipedia.org/wiki/Offsetof
@@ -72,23 +72,23 @@ will add to the now empty list:
 
 Conventional phony targets:
 
-  *  all (default target)
-  *  clean (delete all generated files)
-  *  install (install built artifacts)
-  *  distclean (delete even more than *clean*)
-  *  test or check (run the test suite)
-  *  dist (create a package for distribution)
+  * all (default target)
+  * clean (delete all generated files)
+  * install (install built artifacts)
+  * distclean (delete even more than *clean*)
+  * test or check (run the test suite)
+  * dist (create a package for distribution)
 
 The *install* target, by convention, should use PREFIX and DESTDIR:
 
-  *  PREFIX: should default to */usr/local*
-  *  DESTDIR: for staged builds (install in a fake root)
+  * PREFIX: should default to */usr/local*
+  * DESTDIR: for staged builds (install in a fake root)
 
 
 Standard Options
 ----------------
 
-From <http://www.tldp.org/LDP/abs/html/standard-options.html>: 
+From <http://www.tldp.org/LDP/abs/html/standard-options.html>:
 
 >
     -h  --help       Give usage message and exit
@@ -131,8 +131,8 @@ to least precedence. All operators associate left-to-right unless
 indicated otherwise. For example, 4-2+1 is 3 (not 1).
 
 
-Rounding up to multiples of 2, 4, 8, etc.
------------------------------------------
+Rounding up to multiples of 2, 4, 8 (powers of two)
+---------------------------------------------------
 
 The integer *n* can be rounded up to a multiple of 2, 4, 8 like this:
 
@@ -183,9 +183,9 @@ a software tool will convert it to nicely looking HTML
 features, known as “GitHub Flavored Markdown” (or GFM).
 Online previewers and even editors exist.
 
- * <https://daringfireball.net/projects/markdown/>
- * <https://github.github.com/gfm/>
- * <https://jbt.github.io/markdown-editor/>
+  * <https://daringfireball.net/projects/markdown/>
+  * <https://github.github.com/gfm/>
+  * <https://jbt.github.io/markdown-editor/>
 
 
 References
@@ -205,6 +205,14 @@ to dedicate some work to the public domain.
 The [POSIX standards](http://pubs.opengroup.org/onlinepubs/9699919799/)
 (IEEE Std 1003.1-2017), volume about *Shell & Utilities*.
 
+Rob Pike, *Notes on Programming in C*, 1989,
+[archived at Lysator](https://www.lysator.liu.se/c/pikestyle.html),
+and [local copy](/doc/PikeStyle.md)
+
 Kernighan and Ritchie, *The C Programming Language*, 2nd edition,
 Prentice Hall 1988, [ISBN 0131103628](https://www.amazon.com/dp/0131103628).
 
+Aho, Kernighan, Weinberger, *The AWK Programming Language*,
+Addison-Wesley 1988, [ISBN 020107981X](https://www.amazon.com/dp/020107981X).
+
+*The Unix Philosophy* at [Wikipedia](https://en.wikipedia.org/wiki/Unix_philosophy).
