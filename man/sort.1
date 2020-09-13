@@ -1,0 +1,28 @@
+.TH SORT 1 July\ 2019 local
+
+.SH NAME
+sort \- sort text lines
+
+.SH SYNOPSIS
+\fBsort\fP [-r] [-c chunksize] [file]
+
+.SH DESCRIPTION
+Sort text lines from the given file (or stdin)
+into lexicographic order. By default, sort loads
+all input into memory to sort. The \fB-c\fP option
+requests external sort using runs of the given
+\fIchunksize\fP (in bytes). The \fB-r\fP option
+does reverse lexicographic sorting.
+
+.SH EXAMPLE
+Sort two files to standard output:
+.nf
+.RS
+$ \fBconcat\fP file1 file2 | \fBsort\fP
+.RE
+.fi
+
+.SH BUGS
+External sort writes to temporary files in /tmp
+and thereby may overwrite existing files or links
+to files.

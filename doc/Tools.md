@@ -368,3 +368,8 @@ can be represented in an array: index 0 is left unused, the
 two children of the node at index `k` are at index `2k` and
 `2k+1`. The initial heap will be created by in-memory sorting
 (a sorted array always has the heap property).
+
+Reverse sorting (exercise 4-6) must be revised: implementing
+it in *writelines* is no longer feasible, it has to go into
+a central comparison routine, which is to be used for sorting
+the individual runs and for the merging of the runs.

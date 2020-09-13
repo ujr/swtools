@@ -2,7 +2,7 @@
 .POSIX:
 
 CC = cc -std=c99
-CFLAGS = -Wall -Wextra -Os -g3
+CFLAGS = -Wall -Wextra -g3 -O0
 LDFLAGS =
 LDLIBS = # -lm
 PREFIX = /usr/local

@@ -27,6 +27,7 @@ struct lines {
 
 static int memsort(struct lines *plines, FILE *fin, FILE *fout);
 static int extsort(struct lines *plines, FILE *fin, FILE *fout);
+static int compare(const char *s, const char *t);
 
 static size_t appendline(char **buf, FILE *fp);
 static int readlines(struct lines *plines, FILE *fp);
@@ -75,7 +76,8 @@ sortcmd(int argc, char **argv)
 
   if (argc > 0 && *argv) {
     usage("too many arguments");
-    return FAILHARD;
+    r = FAILHARD;
+    goto done;
   }
 
   if (setjmp(bufjump)) {
@@ -151,6 +153,14 @@ extsort(struct lines *plines, FILE *fin, FILE *fout)
   return SUCCESS;
 }
 
+static int
+compare(const char *s, const char *t)
+{
+  int r = strcmp(s, t);
+  if (reverse) r *= -1;
+  return r;
+}
+
 static size_t /* one line from fp, NUL terminate, return #chars (w/o NUL) */
 appendline(char **buf, FILE *fp)
 {
@@ -208,12 +218,11 @@ sortlines(struct lines *plines)
 static void /* write lines in linepos-order to fp */
 writelines(struct lines *plines, FILE *fp)
 {
-  size_t i, j, k, n;
+  size_t i, k, n;
   const char *s;
   n = buf_size(plines->linepos);
   for (i = 0; i < n; i++) {
-    j = reverse ? (n-i)-1 : i;
-    k = plines->linepos[j];
+    k = plines->linepos[i];
     s = plines->linebuf + k;
     fputs(s, fp);
   }
@@ -298,7 +307,7 @@ static int mergecmp(int i, int j, void *userdata)
   struct run *mergebuf = userdata;
   const char *s = mergebuf[i].lp;
   const char *t = mergebuf[j].lp;
-  return strcmp(s, t);
+  return compare(s, t);
 }
 
 static void merge(FILE *infps[], int numfp, FILE *outfp)
@@ -343,7 +352,7 @@ static void merge(FILE *infps[], int numfp, FILE *outfp)
 /* Sorting algorithm */
 
 static void swap(size_t *v, size_t i, size_t j);
-static int compare(const size_t *v, size_t i, size_t j, const char *linebuf);
+static int linecmp(const size_t *v, size_t i, size_t j, const char *linebuf);
 
 static void
 quick(size_t *v, size_t lo, size_t hi, const char *linebuf)
@@ -355,7 +364,7 @@ quick(size_t *v, size_t lo, size_t hi, const char *linebuf)
   swap(v, lo, (lo+hi)/2);  /* move middle elem as pivot to v[lo] */
   lim = lo;                /* invariant: v[lo..lim-1] < pivot */
   for (i = lo+1; i <= hi; i++)
-    if (compare(v, i, lo, linebuf) < 0) /* if v[i] < pivot... */
+    if (linecmp(v, i, lo, linebuf) < 0) /* if v[i] < pivot... */
       swap(v, ++lim, i);   /* ...swap it into left subset */
   swap(v, lo, lim);        /* restore pivot, NB v[lim] <= v[lo] */
 
@@ -378,11 +387,11 @@ swap(size_t *v, size_t i, size_t j)
 }
 
 static int
-compare(const size_t *v, size_t i, size_t j, const char *linebuf)
+linecmp(const size_t *v, size_t i, size_t j, const char *linebuf)
 {
   const char *s = linebuf + v[i];
   const char *t = linebuf + v[j];
-  return strcmp(s, t);
+  return compare(s, t);
 }
 
 /* Options and usage */
