@@ -33,8 +33,8 @@ Further **guiding principles** and **best practices** from the book
 
   * “there is great temptation to add more and more features” [p.80]
     (also known as _creaping featurism_)
-  * whe n an option is left unspecified, this is never an error;
-    (options are optional) instead choose some default value and
+  * when an option is left unspecified, this is never an error
+    (options are optional); instead choose some default value and
     “try not to surprise your users” [p.80]
     (the _principle of least surprise_)
   * “people cost a great deal more than machines” [p.82]
@@ -324,7 +324,7 @@ input fits into memory and thus an internal sort can be used.
     has been read; the public domain [buf.h][growable-buf] header-only
     library will be used to implement growable arrays.
 
-This design precludes NUL in the input. To allow null, we could
+This design precludes NUL in the input. To allow NUL, we could
 explicitly record starting position *and* length of each line
 in *linebuf*.
 
@@ -333,3 +333,38 @@ in *compare* (all order-defining logic in one place) or
 in *writelines* (very simple and efficient) (in the book
 those two methods are called *compare* and *ptext*).
 
+**External sorting** is required when there is more data than
+fits into memory. The approach taken here is to sort chunks
+(runs) of the data and store them to temporary files. Then
+the first *m* of these files are into a new temporary file
+and then removed. This is repeated with the next *m* temporary
+files until only one file is left, which is the sorted output.
+The merger order *m* is a parameter, typically between 3 and 7.
+Existing functionality can be used to sort the individual runs,
+but merging is new and we also need to cope with those temporary
+files.
+
+The temporary files will be */tmp/sortxxxx.tmp* or *$TMPDIR/sortxxx.tmp*,
+which is a bit too simple for real life: we risk overwriting existing
+data, which could also be a link to an essential file! For mitigation,
+create a directory writable only to the sorting routine and set the
+`TMPDIR` variable to this directory; sort will then create its temporary
+files in this directory instead of in */tmp*.
+
+**Merging** uses a heap and works like this:
+
+```text
+read one line from each file
+form a heap from those lines
+while heap not empty:
+  output heap[1], which is always the smallest line
+  read the next line from the same file into heap[1]
+  restore the heap property (“reheap”)
+```
+
+A **heap** is a complete binary tree such that each node is
+less than or equal to its children (the heap property). It
+can be represented in an array: index 0 is left unused, the
+two children of the node at index `k` are at index `2k` and
+`2k+1`. The initial heap will be created by in-memory sorting
+(a sorted array always has the heap property).

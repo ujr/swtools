@@ -60,6 +60,10 @@ for example: `obj/main.o: src/main.c`.
 Beware that out-of-source builds (putting .o files in a separate
 directory from the .c files) is not compatible with inference rules.
 
+Command lines may be prefixed with `-` (minus) to ignore any error
+found while executing the command, with `@` to not echo the command
+to stdout before executing it.
+
 The special target `.SUFFIXES:` (without a value) clears the list
 of built-in inference rules. Further `.SUFFIXES` (with a value)
 will add to the now empty list:

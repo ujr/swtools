@@ -15,3 +15,8 @@
 /obj/*
 !/obj/.keep
 
+# Miscellaneous
+.vscode/
+.*.swp
+TODO
+

@@ -20,8 +20,17 @@ tests: bin/tests
 
 TOOLS = obj/copy.o obj/count.o obj/echo.o obj/detab.o obj/translit.o \
   obj/compare.o obj/include.o obj/concat.o obj/print.o obj/sort.o
-bin/quux: obj/main.o $(TOOLS) obj/utils.o obj/strbuf.o
+bin/quux: obj/main.o $(TOOLS) obj/strbuf.o obj/sorting.o obj/utils.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+symlinks: bin/quux
+	ln -sf quux bin/copy
+	ln -sf quux bin/compare
+	ln -sf quux bin/echo
+	ln -sf quux bin/count
+	ln -sf quux bin/translit
+	ln -sf quux bin/sort
+	ln -sf quux bin/oops
 
 DEPS = src/common.h src/strbuf.h src/tests.h
 obj/%.o: src/%.c $(DEPS)
@@ -41,6 +50,6 @@ check: tests
 	bin/tests
 
 clean:
-	rm -f bin/quux obj/*.o
+	rm -f bin/* obj/*.o
 
 .PHONY: all install check clean dist tools tests

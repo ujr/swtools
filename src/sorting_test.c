@@ -7,11 +7,9 @@
 #include <time.h>
 
 #include "tests.h"
+#include "sorting.h"
 
-extern void bubblesort(int v[], int n);
-extern void shellsort(int v[], int n);
-extern void quicksort(int v[], int n);
-
+static void quickwrap(int v[], int n);
 static void libcsort(int v[], int n);
 static int qcompare(const void *p, const void *q);
 
@@ -19,7 +17,8 @@ static bool equals(int a[], int b[], int n);
 static void reverse(int v[], int n);
 static void print(int v[], int n);
 
-static double bench(int a[], int n, int repeats, void (*sorter)(int *, int));
+typedef void (*sortproc)(int*,int);
+static double bench(int a[], int n, int repeats, sortproc);
 
 static int a[] = { 6, 10, 3, 2, 4, 8, 1, 7, 5, 9 };
 static int b[] = { 6, 10, 3, 2, 4, 8, 1, 7, 5, 9 };
@@ -133,12 +132,12 @@ sorting_test(int *numpass, int *numfail)
   TEST("sort empty", equals(b, r, n));
 
   HEADING("Testing Quick Sort");
-  quicksort(c, n);
+  quicksort(c, n, 0, 0);
   TEST("sort 10 ints", equals(c, z, n));
-  quicksort(c, n);
+  quicksort(c, n, 0, 0);
   TEST("idempotent", equals(c, z, n));
   reverse(c, n);
-  quicksort(c, 0);
+  quicksort(c, 0, 0, 0);
   TEST("sort empty", equals(c, r, n));
 
   HEADING("Comparing Bubble/Shell/Quick Sort");
@@ -152,7 +151,7 @@ sorting_test(int *numpass, int *numfail)
   secs = bench(small, n, m, shellsort);
   INFO("%f secs to Shell-sort small array (n=%d) m=%d times", secs, n, m);
 
-  secs = bench(small, n, m, quicksort);
+  secs = bench(small, n, m, quickwrap);
   INFO("%f secs to Quicksort small array (n=%d) m=%d times", secs, n, m);
 
   secs = bench(small, n, m, libcsort);
@@ -166,11 +165,29 @@ sorting_test(int *numpass, int *numfail)
   secs = bench(large, n, m, shellsort);
   INFO("%f secs to Shell-sort large array (n=%d) m=%d times", secs, n, m);
 
-  secs = bench(large, n, m, quicksort);
+  secs = bench(large, n, m, quickwrap);
   INFO("%f secs to Quicksort large array (n=%d) m=%d times", secs, n, m);
 
   secs = bench(large, n, m, libcsort);
   INFO("%f secs to libc qsort large array (n=%d) m=%d times", secs, n, m);
+
+  HEADING("Testing reheap()");
+  int heap[] = {0,1,2,3,4,5,6};
+  reheap(heap, 6, 0, 0);
+  int exph1[] = {0,1,2,3,4,5,6};
+  TEST("h[1]=1; reheap", equals(exph1, heap, 7));
+  heap[1] = 2;
+  reheap(heap, 6, 0, 0);
+  int exph2[] = {0,2,2,3,4,5,6};
+  TEST("h[1]=2; reheap", equals(exph2, heap, 7));
+  heap[1] = 9;
+  reheap(heap, 6, 0, 0);
+  int exph3[] = {0,2,4,3,9,5,6};
+  TEST("h[1]=9; reheap", equals(exph3, heap, 7));
+  heap[1] = 9;
+  reheap(heap, 6, 0, 0);
+  int exph4[] = {0,3,4,6,9,5,9};
+  TEST("h[1]=9; reheap", equals(exph4, heap, 7));
 
   if (numpass) *numpass = count_pass;
   if (numfail) *numfail = count_fail;
@@ -206,6 +223,12 @@ print(int v[], int n)
   for (i = 0; i < n; i++)
     printf(" %d", v[i]);
   printf("\n");
+}
+
+static void
+quickwrap(int v[], int n)
+{
+  quicksort(v, n, 0, 0);
 }
 
 static void /* wrap libc's qsort */
