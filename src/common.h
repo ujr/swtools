@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <stdbool.h>  /* C99 */
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,7 +20,7 @@
 typedef int toolfun(int argc, char **argv);
 
 const char *me;  /* for error messages */
-int verbosity;   /* normally 0=silenty */
+int verbosity;   /* normally 0=silent */
 
 /* Primitives */
 
@@ -32,7 +33,8 @@ int verbosity;   /* normally 0=silenty */
 #define streq(s,t) (0==strcmp((s),(t)))
 
 const char *getprog(char **argv);
-int scanint(const char *s, int *v);
+size_t scanint(const char *s, int *v);
+size_t scanspace(const char *s);
 FILE *openin(const char *filepath);
 FILE *openout(const char *filepath);
 void filecopy(FILE *fin, FILE *fout);

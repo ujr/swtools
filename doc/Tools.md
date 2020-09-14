@@ -36,8 +36,10 @@ Further **guiding principles** and **best practices** from the book
   * when an option is left unspecified, this is never an error
     (options are optional); instead choose some default value and
     “try not to surprise your users” [p.80]
-    (the _principle of least surprise_)
+    (_principle of least surprise_)
   * “people cost a great deal more than machines” [p.82]
+  * “proper separation of function” [p.131]
+    (_separation of concerns_, which is an old design principle)
 
 
 Manual Pages
@@ -373,3 +375,18 @@ Reverse sorting (exercise 4-6) must be revised: implementing
 it in *writelines* is no longer feasible, it has to go into
 a central comparison routine, which is to be used for sorting
 the individual runs and for the merging of the runs.
+
+Further options allow case folding (`-f`), “dictionary sort”
+(`-d`, exercise 4-19) where runs of non-alpha-numeric characters
+are considered a single blank, and an initial numeric string
+(`-n`, exercise 4-20) that will sort numerically, while the
+remainder of the line still sorts lexicographically.
+
+Beware that on some systems `char` is signed and on some it's
+unsigned. We always cast to `unsigned char` before passing
+a character to any of the `<ctype.h>` functions (because they
+implicitly convert to `int` and we want no sign extension)
+and before computing character differences. When having a
+character string, we can convert the string pointer to
+`unsigned char*` (via `void*` to avoid a warning about
+differing signedness).

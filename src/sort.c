@@ -1,5 +1,6 @@
 
 #include <assert.h>
+#include <ctype.h>
 #include <setjmp.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -45,10 +46,14 @@ static void droptemps(FILE **fps, int lo, int hi);
 static void merge(FILE **infps, int numfp, FILE *outfp);
 static void quick(size_t *v, size_t lo, size_t hi, const char *linebuf);
 
-static int parseopts(int argc, char **argv, bool *reverse, size_t *chunksize);
+static int parseopts(int argc, char **argv, size_t *chunksize);
 static void usage(const char *errmsg);
 
 static bool reverse = false;
+static bool casefold = false;
+static bool dictsort = false;
+static bool numeric = false;
+
 #define MERGEORDER 5
 #define PATHBUFLEN 256
 #define MIN(x,y) ((x) < (y) ? (x) : (y))
@@ -63,7 +68,7 @@ sortcmd(int argc, char **argv)
   FILE *fin;
   struct lines lines = { 0, 0, 0 }; // must zero-init for buf.h
 
-  r = parseopts(argc, argv, &reverse, &lines.chunksize);
+  r = parseopts(argc, argv, &lines.chunksize);
   if (r < 0) return FAILHARD;
   SHIFTARGS(argc, argv, r);
 
@@ -85,6 +90,11 @@ sortcmd(int argc, char **argv)
     r = FAILSOFT;
     goto done;
   }
+
+  if (verbosity > 0)
+    fprintf(stderr, "(sorting with options: dict=%d, "
+      "fold=%d, numeric=%d, reverse=%d, chunksize=%zd)\n",
+      dictsort, casefold, numeric, reverse, lines.chunksize);
 
   if (lines.chunksize > 0) {
     r = extsort(&lines, fin, stdout);
@@ -150,15 +160,63 @@ extsort(struct lines *plines, FILE *fin, FILE *fout)
   fclose(infile);
   droptemp(hi);
 
+  if (verbosity > 0)
+    fprintf(stderr, "(external sorting used %d runs, "
+    "chunk size = %zd, merge order = %d)\n", hi+1, plines->chunksize, MERGEORDER);
+
   return SUCCESS;
 }
+
+/* dictionary sort: any non-alnum is a separator */
+#define ISSEP(c) (c && !isalnum(c))
+#define SKIPSEP(s) while (ISSEP(*s)) ++s
 
 static int
 compare(const char *s, const char *t)
 {
-  int r = strcmp(s, t);
-  if (reverse) r *= -1;
-  return r;
+  int r, rev = reverse ? -1 : 1;
+
+  if (numeric) {
+    // compare numeric prefix; ignore leading space
+    // lines w/o numeric prefix always sort at the end
+    int i, j;
+    s += scanspace(s);
+    t += scanspace(t);
+    size_t m = scanint(s, &i);
+    size_t n = scanint(t, &j);
+    if (m > 0 && n > 0) {
+      if (i < j) return -1*rev;
+      if (j < i) return +1*rev;
+      s += m; t += n;
+    }
+    else if (m > 0) return -1;
+    else if (n > 0) return +1;
+    // numeric prefix equal (or both missing)
+  }
+
+  if (dictsort) {
+    const unsigned char *ss = (void *) s;
+    const unsigned char *tt = (void *) t;
+    SKIPSEP(ss); SKIPSEP(tt);
+    while (*ss && *tt) {
+      if (*ss == *tt) { ++ss; ++tt; continue; }
+      if (casefold && tolower(*ss) == tolower(*tt)) { ++ss; ++tt; continue; }
+      int match = ISSEP(*ss) && ISSEP(*tt);
+      SKIPSEP(ss); SKIPSEP(tt);
+      if (!match) break;
+    }
+    SKIPSEP(ss); SKIPSEP(tt);
+    r = casefold ? tolower(*ss) - tolower(*tt) : *ss - *tt;
+  }
+  else if (casefold) {
+    const unsigned char *ss = (void *) s;
+    const unsigned char *tt = (void *) t;
+    while (*ss && *tt && (*ss == *tt || tolower(*ss) == tolower(*tt))) ++ss, ++tt;
+    r = tolower(*ss) - tolower(*tt);
+  }
+  else r = strcmp(s, t);
+
+  return r*rev;
 }
 
 static size_t /* one line from fp, NUL terminate, return #chars (w/o NUL) */
@@ -397,7 +455,7 @@ linecmp(const size_t *v, size_t i, size_t j, const char *linebuf)
 /* Options and usage */
 
 static int
-parseopts(int argc, char **argv, bool *reverse, size_t *chunksize)
+parseopts(int argc, char **argv, size_t *chunksize)
 {
   long l;
   int i, showhelp = 0;
@@ -408,15 +466,17 @@ parseopts(int argc, char **argv, bool *reverse, size_t *chunksize)
     if (streq(p, "--")) { ++i; break; } /* end of option args */
     for (++p; *p; p++) {
       switch (*p) {
-        case 'r': *reverse = 1;
-          break;
+        case 'd': dictsort = true; break;
+        case 'f': casefold = true; break;
+        case 'n': numeric = true; break;
+        case 'r': reverse = true; break;
         case 'c': 
           if (argv[i+1] && (l = atol(argv[i+1])) > 0 && !*(p+1)) {
             *chunksize = l;
             i += 1;
             break;
           }
-          usage("option -c requires a non-negative number argument");
+          usage("option -c requires a positive number argument");
           return -1;
         case 'h': showhelp = 1;
           break;
@@ -439,8 +499,11 @@ usage(const char *errmsg)
 {
   FILE *fp = errmsg ? stderr : stdout;
   if (errmsg) fprintf(fp, "%s: %s\n", me, errmsg);
-  fprintf(fp, "Usage: %s [-r] [-c bytes]\n", me);
+  fprintf(fp, "Usage: %s [-d] [-f] [-n] [-r] [-c bytes]\n", me);
   fprintf(fp, "Sort text lines\n");
-  fprintf(fp, "Options: -r reverse sort\n");
-  fprintf(fp, "  -c bytes  chunk size (in-memory sort if not specified)\n");
+  fprintf(fp, "  -c bytes   chunk size (in-memory sort if not specified)\n");
+  fprintf(fp, "  -d   dictionary sort: compare only on letters and digits\n");
+  fprintf(fp, "  -f   fold lower case and upper case (i.e., ignore case)\n");
+  fprintf(fp, "  -n   numeric sort: assume first token is a number\n");
+  fprintf(fp, "  -r   reverse sort\n");
 }

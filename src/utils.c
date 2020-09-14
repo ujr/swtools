@@ -22,7 +22,7 @@ getprog(char **argv)
 }
 
 /* scanint: scan a decimal integer number, return #chars read */
-int
+size_t
 scanint(const char *s, int *v)
 {
   int neg, n;
@@ -45,6 +45,14 @@ scanint(const char *s, int *v)
   }
 
   if (v) *v = neg ? n : -n;
+  return p - s; // #chars scanned
+}
+
+size_t
+scanspace(const char *s)
+{
+  const char *p = s;
+  while (isspace(*p)) ++p;
   return p - s; // #chars scanned
 }
 

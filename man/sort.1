@@ -4,15 +4,24 @@
 sort \- sort text lines
 
 .SH SYNOPSIS
-\fBsort\fP [-r] [-c chunksize] [file]
+\fBsort\fP [-d] [-f] [-n] [-r] [-c chunksize] [file]
 
 .SH DESCRIPTION
-Sort text lines from the given file (or stdin)
-into lexicographic order. By default, sort loads
-all input into memory to sort. The \fB-c\fP option
-requests external sort using runs of the given
-\fIchunksize\fP (in bytes). The \fB-r\fP option
-does reverse lexicographic sorting.
+Sort text lines from the given file (or stdin) into lexicographic
+order. By default, sort loads all input into memory to sort.
+The \fB-c\fP option requests external sort using runs of the given
+\fIchunksize\fP (in bytes).
+The \fB-d\fP option does dictionary sort, meaning that runs of
+spaces and punctuation are considered a single blank for sorting.
+The \fB-f\fP option does case folding (ignoring case for sorting).
+The \fB-n\fP option assumes an initial numeric prefix and sorts
+numerically on that prefix, but lexicographically on the remainder
+of the line.
+The \fB-r\fP option reverses the sort order.
+All options can be combined.
+
+External sort writes to temporary files in the directory specified
+by the TMPDIR environment variable, or to /tmp if it is undefined.
 
 .SH EXAMPLE
 Sort two files to standard output:
@@ -23,6 +32,7 @@ $ \fBconcat\fP file1 file2 | \fBsort\fP
 .fi
 
 .SH BUGS
-External sort writes to temporary files in /tmp
-and thereby may overwrite existing files or links
-to files.
+External sort writes to temporary files \fIsortxxxx.tmp\fP and
+thereby may overwrite existing files, also linked files.
+As a workaround, create a directory that is writable only
+to sort and set the TMPDIR variable accordingly.
