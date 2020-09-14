@@ -56,3 +56,4 @@ int includecmd(int argc, char **argv);
 int concatcmd(int argc, char **argv);
 int printcmd(int argc, char **argv);
 int sortcmd(int argc, char **argv);
+int uniquecmd(int argc, char **argv);

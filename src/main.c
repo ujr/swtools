@@ -24,6 +24,7 @@ struct {
   { "concat", concatcmd },
   { "print", printcmd },
   { "sort", sortcmd },
+  { "unique", uniquecmd },
   { 0, 0 }
 };
 

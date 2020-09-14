@@ -1,0 +1,25 @@
+.TH UNIQUE 1 July\ 2019 local
+
+.SH NAME
+unique \- delete adjacent duplicate lines
+
+.SH SYNOPSIS
+\fBunique\fP [-n] [file]
+
+.SH DESCRIPTION
+\fBunique\fP writes to its output only the first line
+from a group of adjacent identical lines. If the option
+\fB-n\fP is given, each output line is prefixed with
+the number of occurrences of the line in the original
+file.
+
+This program is most useful together with
+.BR sort (1).
+
+.SH EXAMPLE
+To eliminate duplicate lines in the output of a program:
+.nf
+.RS
+$ \fBprogram\fP | \fBsort\fP | \fBunique\fP
+.RE
+.fi

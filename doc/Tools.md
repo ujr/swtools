@@ -390,3 +390,56 @@ and before computing character differences. When having a
 character string, we can convert the string pointer to
 `unsigned char*` (via `void*` to avoid a warning about
 differing signedness).
+
+
+Adjacent Duplicate Lines
+------------------------
+
+Once a file is sorted, it is not difficult to find duplicate
+lines, because they are adjacent. The *unique* tool removes
+adjacent duplicate lines (keeping only one copy). If the
+option `-n` is given, each line is prefixed with the number of
+occurrences of the line in the original input (exercise 4-25).
+It would be a bad idea to suffix this number, because then
+it is in a variable position.
+
+The occurrence prefix minimally complicates matters because
+we only know the number of occurrences after having seen the
+first non-duplicate line. Only now can we emit the number
+and the line. The overall plan is this:
+
+```text
+read 1st line into buf0; return if eof
+while read next line into buf1:
+  if same as buf0: ++num;
+  else: emit(num, buf0); swap buf0/buf1; num=1
+emit(num, buf0)
+```
+
+If buf0 and buf1 are pointers to the actual buffers,
+the "swap" does not have to copy a line, it simply
+changes pointers. The "emit" after the loop is necessary
+because only upon end-of-input do we know the number of
+occurrences of the last line.
+
+With the tools so far it we can construct a pipeline to
+create a word frequency list for a document; for example:
+
+```sh
+concat UNLICENSE |
+  translit 'A-Z \t\n' 'a-z\n' | translit '.,:"' |
+    sort -d -f | unique -n | sort -n -r
+```
+
+Options `-d` and `-f` (as with sort) would be very useful.
+
+**Exercise 4-28** proposes a tool *common* that compares
+lines in two sorted text files and produces three-column
+output: lines only in the 1st file, lines only in the
+2nd file, and lines in both files. Options `-1`, `-2`,
+`-3` can be used to print only the corresponding column.
+
+Such a tool, in combination with *translit*, *sort*, and
+*unique*, allows comparing documents against dictionaries
+for indicating spelling problems or glossary terms.
+But not today.
