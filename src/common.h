@@ -59,3 +59,4 @@ int concatcmd(int argc, char **argv);
 int printcmd(int argc, char **argv);
 int sortcmd(int argc, char **argv);
 int uniquecmd(int argc, char **argv);
+int shufflecmd(int argc, char **argv);

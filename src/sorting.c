@@ -1,4 +1,8 @@
 
+#include <stddef.h>  /* size_t */
+#include <stdlib.h>  /* rand() */
+#include <time.h>    /* time() */
+
 #include "sorting.h"
 
 static int /* default comparison function */
@@ -6,6 +10,12 @@ defaultcmp(int a, int b, void *dummy)
 {
   (void) dummy; /* unused */
   return a < b ? -1 : a > b ? 1 : 0;
+}
+
+static int /* default random number function */
+defaultrnd(int n)
+{
+  return rand() % n;
 }
 
 
@@ -99,5 +109,19 @@ reheap(int heap[], int n, int (*cmp)(int,int,void*), void *userdata)
     if (cmp(heap[i], heap[j], userdata) <= 0) i = n; /* terminate loop */
     else swap(heap, i, j);
     i = j; j = 2*i;
+  }
+}
+
+void /* random permutation of v[0..n-1] (Fisher-Yates) */
+shuffle(int v[], int n, int (*rnd)(int))
+{
+  if (!rnd) {
+    rnd = defaultrnd;
+    srand(time(0));
+  }
+  while (n > 1) {
+    int k = rnd(n); /* 0 <= k < n */
+    n -= 1;
+    swap(v, n, k);
   }
 }

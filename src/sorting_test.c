@@ -189,6 +189,17 @@ sorting_test(int *pnumpass, int *pnumfail)
   int exph4[] = {0,3,4,6,9,5,9};
   TEST("h[1]=9; reheap", equals(exph4, heap, 7));
 
+  HEADING("Testing shuffle()");
+  int v[] = {0,1,2,3,4,5};
+  shuffle(v, 0, 0);
+  TEST("empty", v[0] == 0);
+  shuffle(v, 1, 0);
+  TEST("singleton", v[0] == 0);
+  shuffle(v, sizeof(v)/sizeof(v[0]), 0);
+  INFO("shuffled: %d %d %d %d %d %d", v[0], v[1], v[2], v[3], v[4], v[5]);
+  shuffle(v, sizeof(v)/sizeof(v[0]), 0);
+  INFO("shuffled: %d %d %d %d %d %d", v[0], v[1], v[2], v[3], v[4], v[5]);
+
   if (pnumpass) *pnumpass += numpass;
   if (pnumfail) *pnumfail += numfail;
 }

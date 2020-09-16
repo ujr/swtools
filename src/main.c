@@ -25,6 +25,7 @@ struct {
   { "print", printcmd },
   { "sort", sortcmd },
   { "unique", uniquecmd },
+  { "shuffle", shufflecmd },
   { 0, 0 }
 };
 
