@@ -30,6 +30,7 @@ struct {
 
 const char *me; // for error messages
 int verbosity = 0;
+jmp_buf errjmp;
 static const char *progname;
 static const char *toolname;
 
@@ -127,6 +128,11 @@ main(int argc, char **argv)
   toolname = 0;
   progname = getprog(argv);
   if (!progname) return FAILHARD;
+
+  if (setjmp(errjmp)) {
+    printerr("giving up");
+    return FAILSOFT;
+  }
 
   cmd = findtool(progname);
   if (cmd) {

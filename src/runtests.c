@@ -10,6 +10,8 @@ extern void buf_test(int *pnumpass, int *pnumfail);
 extern void strbuf_test(int *pnumpass, int *pnumfail);
 extern void sorting_test(int *pnumpass, int *pnumfail);
 
+const char *me = "runtests";
+
 int
 main(int argc, char **argv)
 {

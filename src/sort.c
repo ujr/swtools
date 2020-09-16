@@ -8,33 +8,14 @@
 #include <stdlib.h>
 
 #include "common.h"
+#include "lines.h"
 #include "sorting.h"
 #include "strbuf.h"
 
-static jmp_buf bufjump;
-static void buf_nomem(void)
-{
-  longjmp(bufjump, 1);
-}
-
-#define BUF_ABORT buf_nomem()
-#include "buf.h"
-
-struct lines {
-  char *linebuf; // buf.h
-  size_t *linepos; // buf.h
-  size_t chunksize;
-};
-
 static int memsort(struct lines *plines, FILE *fin, FILE *fout);
 static int extsort(struct lines *plines, FILE *fin, FILE *fout);
-static int compare(const char *s, const char *t);
-
-static size_t appendline(char **buf, FILE *fp);
-static int readlines(struct lines *plines, FILE *fp);
 static void sortlines(struct lines *plines);
-static void writelines(struct lines *plines, FILE *fp);
-static void freelines(struct lines *plines);
+static int compare(const char *s, const char *t);
 
 static void nametemp(char *buf, size_t len, int num);
 static FILE *maketemp(int num);
@@ -44,7 +25,7 @@ static void opentemps(FILE **fps, int lo, int hi);
 static void droptemps(FILE **fps, int lo, int hi);
 
 static void merge(FILE **infps, int numfp, FILE *outfp);
-static void quick(size_t *v, size_t lo, size_t hi, const char *linebuf);
+static void quick(size_t v[], size_t lo, size_t hi, const char *linebuf);
 
 static int parseopts(int argc, char **argv, size_t *chunksize);
 static void usage(const char *errmsg);
@@ -85,12 +66,6 @@ sortcmd(int argc, char **argv)
     goto done;
   }
 
-  if (setjmp(bufjump)) {
-    printerr("input too big to sort");
-    r = FAILSOFT;
-    goto done;
-  }
-
   if (verbosity > 0)
     fprintf(stderr, "(sorting with options: dict=%d, "
       "fold=%d, numeric=%d, reverse=%d, chunksize=%zd)\n",
@@ -115,12 +90,12 @@ static int
 memsort(struct lines *plines, FILE *fin, FILE *fout)
 {
   readlines(plines, fin);
-  CHECKIOERR(stdin, "reading input");
+  CHECKIOERR(fin, "reading input");
 
   sortlines(plines);
 
   writelines(plines, fout);
-  CHECKIOERR(stdout, "writing output");
+  CHECKIOERR(fout, "writing output");
 
   return SUCCESS;
 }
@@ -133,6 +108,7 @@ extsort(struct lines *plines, FILE *fin, FILE *fout)
   FILE *infiles[MERGEORDER];
 
   do {
+    clearlines(plines);
     r = readlines(plines, fin);
     CHECKIOERR(stdin, "reading input");
     sortlines(plines);
@@ -219,78 +195,14 @@ compare(const char *s, const char *t)
   return r*rev;
 }
 
-static size_t /* one line from fp, NUL terminate, return #chars (w/o NUL) */
-appendline(char **buf, FILE *fp)
-{
-  int c;
-  size_t n0, n1;
-  const int delim = '\n';
-
-  n0 = buf_size(*buf);
-  while ((c = getc(fp)) != EOF && c != delim) {
-    buf_push(*buf, c);
-  }
-  if (c == delim) buf_push(*buf, delim);
-  n1 = buf_size(*buf);
-
-  /* fix incomplete last line */
-  if (c == EOF && n1 > n0 && buf_peek(*buf) != delim) {
-    buf_push(*buf, delim);
-    n1 += 1;
-  }
-
-  buf_push(*buf, 0); /* terminate string */
-
-  return ferror(fp) ? 0 : n1 - n0;
-}
-
-static int /* return <0 on error, 0 on eof */
-readlines(struct lines *plines, FILE *fp)
-{
-  size_t pos = 0;
-  size_t limit = plines->chunksize;
-
-  buf_clear(plines->linebuf);
-  buf_clear(plines->linepos);
-
-  for (;;) {
-    size_t n = appendline(&plines->linebuf, fp);
-    if (n == 0) return 0; /* error or eof */
-    buf_push(plines->linepos, pos);
-    pos += n; /* advance position in linebuf */
-    pos += 1; /* NUL is not counted by n */
-    if (0 < limit && limit <= pos) return 1;
-  }
-}
-
 static void /* sort the linepos array */
 sortlines(struct lines *plines)
 {
-  size_t nlines = buf_size(plines->linepos);
+  size_t nlines = countlines(plines);
   if (nlines > 0) {
     size_t lo = 0, hi = nlines-1;
     quick(plines->linepos, lo, hi, plines->linebuf);
   }
-}
-
-static void /* write lines in linepos-order to fp */
-writelines(struct lines *plines, FILE *fp)
-{
-  size_t i, k, n;
-  const char *s;
-  n = buf_size(plines->linepos);
-  for (i = 0; i < n; i++) {
-    k = plines->linepos[i];
-    s = plines->linebuf + k;
-    fputs(s, fp);
-  }
-}
-
-static void /* free the linebuf and linepos memory */
-freelines(struct lines *plines)
-{
-  buf_free(plines->linebuf);
-  buf_free(plines->linepos);
 }
 
 /* Temp file housekeeping */
@@ -393,13 +305,13 @@ static void merge(FILE *infps[], int numfp, FILE *outfp)
     FILE *fp = mergebuf[heap[1]].fp;
     char *lp = mergebuf[heap[1]].lp;
     fputs(lp, outfp);
-    buf_clear(lp);
+    truncline(&lp);
     size_t len = appendline(&lp, fp);
     if (len > 0) {
       mergebuf[heap[1]].lp = lp;
     }
     else { /* one less input file */
-      buf_free(lp);
+      freeline(&lp);
       heap[1] = heap[n];
       n -= 1;
     }

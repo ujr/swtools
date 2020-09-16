@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <setjmp.h>
 #include <stdbool.h>  /* C99 */
 #include <stddef.h>
 #include <stdio.h>
@@ -19,8 +20,9 @@
 
 typedef int toolfun(int argc, char **argv);
 
-const char *me;  /* for error messages */
-int verbosity;   /* normally 0=silent */
+extern const char *me;  /* for error messages */
+extern int verbosity;   /* normally 0=silent */
+extern jmp_buf errjmp;  /* longjmp here to give up */
 
 /* Primitives */
 
