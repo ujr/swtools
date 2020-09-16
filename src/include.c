@@ -42,7 +42,7 @@ include(FILE *fp, int *errcnt)
 
   while ((n = getln(&line, &len, fp)) > 0) {
     if (parseline(line, &filename)) {
-      const char *fn2 = strbuf_buffer(&filename);
+      const char *fn2 = strbuf_ptr(&filename);
       FILE *fp2 = openin(fn2);
       if (fp2) {
         include(fp2, errcnt);

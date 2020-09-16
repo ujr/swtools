@@ -6,7 +6,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "tests.h"
+#include "test.h"
 #include "sorting.h"
 
 static void quickwrap(int v[], int n);
@@ -103,11 +103,11 @@ static int large[1000] = {
   850, 688, 632, 772, 314, 766
 };
 
-int
-sorting_test(int *numpass, int *numfail)
+void
+sorting_test(int *pnumpass, int *pnumfail)
 {
-  int count_pass = 0;
-  int count_fail = 0;
+  int numpass = 0;
+  int numfail = 0;
 
   int n = 10; /* array length */
   int m = 10*1000; /* repeat count for timings */
@@ -189,10 +189,8 @@ sorting_test(int *numpass, int *numfail)
   int exph4[] = {0,3,4,6,9,5,9};
   TEST("h[1]=9; reheap", equals(exph4, heap, 7));
 
-  if (numpass) *numpass = count_pass;
-  if (numfail) *numfail = count_fail;
-
-  return count_fail != 0;
+  if (pnumpass) *pnumpass += numpass;
+  if (pnumfail) *pnumfail += numfail;
 }
 
 static bool /* return true iff a_i == b_i for i in 0..n-1 */

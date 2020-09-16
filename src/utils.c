@@ -96,12 +96,12 @@ getline(strbuf *sp, int delim, FILE *fp)
 {
   int c;
   size_t l0, l1;
-  l0 = strbuf_length(sp);
+  l0 = strbuf_len(sp);
   while ((c = getc(fp)) != EOF && c != delim) {
     strbuf_addc(sp, c);
   }
   if (c == delim) strbuf_addc(sp, c);
-  l1 = strbuf_length(sp);
+  l1 = strbuf_len(sp);
   return strbuf_failed(sp) || ferror(fp) ? -1 : (int)(l1 - l0);
 }
 

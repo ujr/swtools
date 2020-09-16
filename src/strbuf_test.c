@@ -5,28 +5,29 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "tests.h"
+#include "test.h"
 #include "strbuf.h"
 
-#define LEN(sp)   strbuf_length(sp)
+#define LEN(sp)   strbuf_len(sp)
 #define SIZE(sp)  strbuf_size(sp)
 #define LENLTSIZE(sp)  (LEN(sp) < SIZE(sp))
 #define TERMINATED(sp) (0 == (sp)->buf[LEN(sp)])
 #define INVARIANTS(sp) (LENLTSIZE(sp) && TERMINATED(sp))
 
-int
-strbuf_test(int *numpass, int *numfail)
+void
+strbuf_test(int *pnumpass, int *pnumfail)
 {
   strbuf sb = {0};
   strbuf *sp = &sb;
   int i;
-  int count_pass = 0;
-  int count_fail = 0;
+
+  int numpass = 0;
+  int numfail = 0;
 
   HEADING("Testing strbuf.{c,h}");
 
   INFO("sizeof strbuf: %zu bytes", sizeof(strbuf));
-  TEST("init len 0", strbuf_length(sp) == 0);
+  TEST("init len 0", strbuf_len(sp) == 0);
 
   strbuf_addb(sp, "Hellooo", 5);
   TEST("addb", STREQ(sp->buf, "Hello") && INVARIANTS(sp));
@@ -39,21 +40,23 @@ strbuf_test(int *numpass, int *numfail)
   TEST("trunc 5", STREQ(sp->buf, "Hello") && INVARIANTS(sp));
   strbuf_addf(sp, "+%d-%d=%s", 3, 4, "konfus");
   TEST("addf", STREQ(sp->buf, "Hello+3-4=konfus") && INVARIANTS(sp));
+  sbchar(sp, 10) = 'Q';
+  TEST("char", sbchar(sp, 10) == 'Q');
   strbuf_trunc(sp, 0);
   TEST("trunc 0 (buf)", STREQ(sp->buf, "") && INVARIANTS(sp));
-  TEST("trunc 0 (len)", strbuf_length(sp) == 0 && INVARIANTS(sp));
+  TEST("trunc 0 (len)", strbuf_len(sp) == 0 && INVARIANTS(sp));
 
   for (i = 0; i < 26; i++) {
     strbuf_addc(sp, "abcdefghijklmnopqrstuvwxyz"[i]);
     strbuf_addc(sp, "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[i]);
   }
-  TEST("52*addc", strbuf_length(sp) == 52 && INVARIANTS(sp) &&
+  TEST("52*addc", strbuf_len(sp) == 52 && INVARIANTS(sp) &&
      STREQ(sp->buf, "aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ"));
 
   strbuf_trunc(sp, 0);
-  TEST("trunc 0", strbuf_length(sp) == 0 && INVARIANTS(sp));
+  TEST("trunc 0", strbuf_len(sp) == 0 && INVARIANTS(sp));
   strbuf_addb(sp, "\0\a\b\f\n\r\t\v\0", 9);
-  TEST("embedded \\0", strbuf_length(sp) == 9 && INVARIANTS(sp));
+  TEST("embedded \\0", strbuf_len(sp) == 9 && INVARIANTS(sp));
   INFO("size=%zu", SIZE(sp));
 
   strbuf_free(sp);
@@ -101,7 +104,7 @@ strbuf_test(int *numpass, int *numfail)
   for (i = 0; i < 100*1024*1024; i++) {
     strbuf_addc(sp, "abcdefghijklmnopqrstuvwxyz"[i%26]);
   }
-  TEST("100M*addc", strbuf_length(sp) == 100*1024*1024 && INVARIANTS(sp));
+  TEST("100M*addc", strbuf_len(sp) == 100*1024*1024 && INVARIANTS(sp));
   INFO("size=%zu, len=%zu", SIZE(sp), LEN(sp));
   strbuf_free(sp);
 
@@ -109,7 +112,7 @@ strbuf_test(int *numpass, int *numfail)
   for (i = 0; i < 5*1024*1024; i++) {
     strbuf_addb(sp, "01234567890123456789", 20);
   }
-  TEST("5M*addb", strbuf_length(sp) == 100*1024*1024 && INVARIANTS(sp));
+  TEST("5M*addb", strbuf_len(sp) == 100*1024*1024 && INVARIANTS(sp));
   INFO("size=%zu, len=%zu", SIZE(sp), LEN(sp));
   strbuf_free(sp);
 
@@ -121,7 +124,7 @@ strbuf_test(int *numpass, int *numfail)
   INFO("size=%zu, len=%zu", SIZE(sp), LEN(sp));
   strbuf_free(sp);
 
-#if ALLOC_TILL_FAIL
+#if STRBUF_TEST_ALLOC_TILL_FAIL
   /* Allocating until memory failure: */
   while (!strbuf_failed(sp)) {
     strbuf_addz(sp, "Appending zero-terminated string until memory failure\n");
@@ -130,9 +133,7 @@ strbuf_test(int *numpass, int *numfail)
   INFO("size=%zu, len=%zu, state is failed", SIZE(sp), LEN(sp));
   strbuf_free(sp);
 #endif
-  
-  if (numpass) *numpass = count_pass;
-  if (numfail) *numfail = count_fail;
 
-  return count_fail != 0;
+  if (pnumpass) *pnumpass += numpass;
+  if (pnumfail) *pnumfail += numfail;
 }

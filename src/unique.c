@@ -62,7 +62,7 @@ unique(FILE *fin, bool count, FILE *fout)
     else {
       strbuf *temp;
       if (count) fprintf(fout, "%zd\t", num);
-      fputs(strbuf_buffer(sp0), fout);
+      fputs(strbuf_ptr(sp0), fout);
       temp = sp0; sp0 = sp1; sp1 = temp;
       num = 1;
     }
@@ -70,7 +70,7 @@ unique(FILE *fin, bool count, FILE *fout)
   }
 
   if (count) fprintf(fout, "%zd\t", num);
-  fputs(strbuf_buffer(sp0), fout);
+  fputs(strbuf_ptr(sp0), fout);
 
 done:
   strbuf_free(sp0);
@@ -94,8 +94,8 @@ equal(strbuf *sp1, strbuf *sp2)
 {
   const char *sz1, *sz2;
   assert(sp1 != NULL && sp2 != NULL);
-  sz1 = strbuf_buffer(sp1);
-  sz2 = strbuf_buffer(sp2);
+  sz1 = strbuf_ptr(sp1);
+  sz2 = strbuf_ptr(sp2);
   return strcmp(sz1, sz2) == 0;
 }
 

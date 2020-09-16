@@ -53,10 +53,10 @@ comparecmd(int argc, char **argv)
     strbuf_trunc(&line2, 0);
     n2 = getline(&line2, '\n', fp2);
     if (n1 <= 0 || n2 <= 0) break;
-    if (!equal(strbuf_buffer(&line1), strbuf_buffer(&line2))) {
+    if (!equal(strbuf_ptr(&line1), strbuf_ptr(&line2))) {
       numdiff += 1;
       if (!quiet)
-        diffmsg(lineno, strbuf_buffer(&line1), strbuf_buffer(&line2));
+        diffmsg(lineno, strbuf_ptr(&line1), strbuf_ptr(&line2));
     }
   }
 

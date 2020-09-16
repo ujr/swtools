@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <setjmp.h>
 
-#include "tests.h"
+#include "test.h"
 
 static jmp_buf escape;
 
@@ -21,12 +21,12 @@ test_abort(void)
 #define BUF_ABORT test_abort()
 #include "buf.h"
 
-int
-buf_test(int *numpass, int *numfail)
+void
+buf_test(int *pnumpass, int *pnumfail)
 {
   /* volatile due to setjmp() / longjmp() */
-  volatile int count_pass = 0;
-  volatile int count_fail = 0;
+  volatile int numpass = 0;
+  volatile int numfail = 0;
 
   if (setjmp(escape))
     abort();
@@ -130,8 +130,6 @@ buf_test(int *numpass, int *numfail)
     TEST("overflow grow", aborted);
   }
 
-  if (numpass) *numpass += count_pass;
-  if (numfail) *numfail += count_fail;
-
-  return count_fail != 0;
+  if (pnumpass) *pnumpass += numpass;
+  if (pnumfail) *pnumfail += numfail;
 }

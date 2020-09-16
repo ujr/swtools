@@ -36,8 +36,8 @@ translitcmd(int argc, char **argv)
     return FAILSOFT;
   }
 
-  int dstlen = strbuf_length(&dst);
-  int srclen = strbuf_length(&src);
+  int dstlen = strbuf_len(&dst);
+  int srclen = strbuf_len(&src);
   bool drop = dstlen <= 0; // dest is absent: drop src matches
   bool squash = srclen > dstlen; // src is longer: squash runs
   int lastdst = dstlen - 1; // if squashing: use this character

@@ -1,10 +1,9 @@
-/* strbuf.c - growable string buffer */
+/* strbuf.c - growable char buffer */
 
 #include <assert.h>  /* assert() */
 #include <stdarg.h>  /* va_list etc. */
 #include <stddef.h>  /* size_t */
 #include <stdio.h>   /* vsnprintf() */
-
 #include <stdlib.h>  /* malloc(), realloc(), free() */
 #include <string.h>  /* memcpy(), strlen() */
 
@@ -13,10 +12,10 @@
 #define GROWFUNC(x) (((x)+16)*3/2) /* lifted from Git */
 #define MAX(x,y) ((x) > (y) ? (x) : (y))
 
-#define LEN(sp) ((sp)->len)
-#define SIZE(sp) ((sp)->size & ~1)              /* mask off lsb */
+#define LEN(sp)     ((sp)->len)
+#define SIZE(sp)    ((sp)->size & ~1)           /* mask off lsb */
 #define HASROOM(sp,n) (LEN(sp)+(n)+1 <= SIZE(sp))  /* +1 for \0 */
-#define NEXTSIZE(sp) GROWFUNC(SIZE(sp))    /* next default size */
+#define NEXTSIZE(sp)  GROWFUNC(SIZE(sp))   /* next default size */
 #define SETFAILED(sp) ((sp)->size |= 1)      /* set lsb to flag */
 
 int /* append the string buffer sq */
@@ -27,13 +26,13 @@ strbuf_add(strbuf *sp, strbuf *sq)
 }
 
 int /* append the single character c */
-strbuf_addc(strbuf *sp, char c)
+strbuf_addc(strbuf *sp, int c)
 {
   assert(sp != 0);
   if (!sp->buf || !HASROOM(sp, 1)) {
     if (!strbuf_ready(sp, 1)) return 0; /* nomem */
   }
-  sp->buf[sp->len++] = c;
+  sp->buf[sp->len++] = (unsigned char) c;
   sp->buf[sp->len] = '\0';
   return 1;
 }
@@ -101,20 +100,21 @@ strbuf_trunc(strbuf *sp, size_t n)
   sp->buf[n] = '\0';
 }
 
-int /* ensure enough space for want more characters */
-strbuf_ready(strbuf *sp, size_t want)
+int /* ensure enough space for dlen more characters */
+strbuf_ready(strbuf *sp, size_t dlen)
 {
   assert(sp != 0);
   /* nothing to do if allocated and enough room: */
-  if (sp->buf && HASROOM(sp, want)) return 1;
+  if (sp->buf && HASROOM(sp, dlen)) return 1;
 
-  size_t requested = sp->len + want + 1; /* +1 for \0 */
+  size_t requested = sp->len + dlen + 1; /* +1 for \0 */
   size_t standard = GROWFUNC(SIZE(sp));
   size_t newsize = MAX(requested, standard);
 
   newsize = (newsize+1)&~1; // round up to even
   char *ptr = realloc(sp->buf, newsize);
   if (!ptr) goto nomem;
+  memset(ptr + sp->len, 0, newsize - sp->len);
 
   sp->buf = ptr;
   sp->size = newsize;

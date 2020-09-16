@@ -16,7 +16,7 @@ install: all
 	gzip < quux.1 > $(DESTDIR)$(PREFIX)/share/man/man1/quux.1.gz
 
 tools: bin/quux
-tests: bin/tests
+tests: bin/runtests
 
 TOOLS = obj/copy.o obj/count.o obj/echo.o obj/detab.o obj/translit.o \
   obj/compare.o obj/include.o obj/concat.o obj/print.o obj/sort.o \
@@ -35,14 +35,14 @@ symlinks: bin/quux
 	ln -sf quux bin/unique
 	ln -sf quux bin/oops
 
-DEPS = src/common.h src/strbuf.h src/tests.h
+DEPS = src/common.h src/strbuf.h src/test.h
 obj/%.o: src/%.c $(DEPS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 TESTS = obj/buf_test.o \
         obj/strbuf_test.o obj/strbuf.o \
         obj/sorting_test.o obj/sorting.o
-bin/tests: obj/tests.o obj/utils.o $(TESTS)
+bin/runtests: obj/runtests.o obj/utils.o $(TESTS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 dist: clean
@@ -50,7 +50,7 @@ dist: clean
 
 check: tests
 	@echo "Running Test Suite..."
-	bin/tests
+	bin/runtests
 
 clean:
 	rm -f bin/* obj/*.o
