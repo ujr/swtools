@@ -1,0 +1,40 @@
+.TH SHUFFLE 1 July\ 2019 local
+
+.SH NAME
+shuffle \- random permutation of input text lines
+
+.SH SYNOPSIS
+\fBshuffle\fP [-n num] [-s seed] [files]
+
+.SH DESCRIPTION
+Write a random permutation of the text lines from
+the given files (or stdin) to stdout. Option \fB-s\fP
+seeds the random number generator to get reproducible
+permutations. Option \fB-n\fP writes a random permutation
+of the numbers 1 to \fInum\fP (inclusive) to stdout
+(and ignores any input files).
+
+.SH EXAMPLE
+Get a random permutation of the numbers 1..10:
+.nf
+.RS
+$ \fBshuffle\fP -n 10
+5 10 6 3 4 1 9 2 8 7
+.RE
+.fi
+Exercise the sort tool:
+.nf
+.RS
+$ \fBshuffle\fP file | \fBsort\fP
+.RE
+.fi
+
+.SH BUGS
+All input is read into memory before shuffling.
+There is no attempt at "external shuffling".
+.PP
+This tool uses the
+.RB rand (3)
+library method to get pseudo-random numbers,
+which might not have all desired properties
+of truly random numbers.
