@@ -5,7 +5,8 @@ Brian W. Kernighan and P. J. Plauger,
 *Software Tools in Pascal*, Addison-Wesley, 1981.
 
 Tools in the book but not implemented here:
-*overstrike*, *compress*, *expand*, *archive*, *kwic* and *unrotate*
+*overstrike*, *compress*, *expand*, *archive*,
+*kwic* and *unrotate*
 
 Tools implemented here but not in the book:
 *shuffle*
@@ -22,13 +23,12 @@ Good quality programs require [p.2]:
 Readability is the best criterion of program quality: if it is
 hard to read, then it is hardly good [p.28].
 
-**Testing:** Aim at a small selection of critical tests directed
-at boundaries (where bugs usually hide). You must know in advance
-the answer each test is supposed to produce: if you don't, you're
-*experimenting*, *not testing* [p.19].
+## Controlling Complexity
 
-Further **guiding principles** and **best practices** from the book
-(some have modern names, given in parentheses):
+... is the essence of computer programming. [p.311]
+
+A selection of **guiding principles** and **best practices** from
+the book (some have modern names, given here in parentheses):
 
 - “there is great temptation to add more and more features” [p.80]
   (_creaping featurism_)
@@ -42,6 +42,22 @@ Further **guiding principles** and **best practices** from the book
 - “start testing as soon as possible” (_test driven development_)
   and “top-down testing is a natural extension of top-down
   design and top-down coding” [p.146]
+- “rewriting will always remain an important part of programming”
+  [p.311] (*refactoring*, that is, reading and revising)
+
+The book concludes with three guidelines for attacking
+a programming task:
+
+1. keep it simple
+2. build it in stages
+3. let someone else do the hard part
+
+## Testing
+
+Aim at a small selection of critical tests directed at
+boundaries (where bugs usually hide). You must know in
+advance the answer each test is supposed to produce:
+if you don't, you're *experimenting, not testing*. [p.19]
 
 ## Manual Pages
 
@@ -454,3 +470,15 @@ But not today.
 - print: parameters for offset and count
 - sort: acccept multiple file arguments
 - unique: options -d and -f (as in sort)
+
+## Book Chapters and Tools
+
+1. Getting Started: *copy*, *count*, *detab*
+2. Filters: *entab*, *overstrike*, *compress*, *expand*,
+   *echo*, *translit*
+3. Files: *compare*, *include*, *concat*, *print*, *makecopy*, *archive*
+4. Sorting: *sort*, *unique*, (common), *kwic*, *unrotate*
+5. Text Patterns: *find*, *change*
+6. Editing: *edit*
+7. Formatting: *format*
+8. Macro Processing: *define*, *macro*
