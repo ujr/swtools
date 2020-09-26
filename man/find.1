@@ -1,0 +1,90 @@
+.TH FIND 1 July\ 2019 local
+
+.SH NAME
+find \- find patterns in text
+
+.SH SYNOPSIS
+\fBfind\fP [-i] [-n] [-v] \fIpattern\fP
+
+.SH DESCRIPTION
+\fBfind\fP reads standard input a line at a time and writes
+to standard output those lines that match the specified
+\fIpattern\fP. A text pattern is a concatenation of the
+following elements:
+
+.RS
+.TP
+\fIc\fP
+literal character \fIc\fP
+.TP
+\fB?\fP
+any character except newline
+.TP
+\fB^\fP
+beginning of line
+.TP
+\fB$\fP
+end of line (matches the null string before newline)
+.TP
+\fB[\fP...\fB]\fP
+character class (any one of these characters)
+.TP
+\fB[^\fP...\fB]\fP
+negated character class (all but these characters)
+.TP
+\fB*\fP
+closure (zero or more occurrences of previous element)
+.TP
+\fB\\\fP\fIc\fP
+escaped character (e.g., \fB\\^\fP, \fB\\[\fP, \fB\\*\fP)
+.RE
+
+Special meaning of characters in a text pattern is lost when
+escaped, inside \fB[...]\fP (except \fB\\\fP), or for: \fB%\fP not
+at beginning, \fB$\fP not at end, \fB*\fP at beginning of
+pattern.
+
+A character class consists of zero or more of the following
+elements, surrounded by \fB[\fP and \fB]\fP:
+
+.RS
+.TP
+\fIc\fP
+literal character \fIc\fP, including \fB[\fP
+.TP
+\fIc1\fB-\fIc2\fR
+range of characters (digits, lower or upper case letters)
+.TP
+\fB^\fP
+negated character class (if at beginning)
+.TP
+\fB\\\fP\fIc\fP
+escaped character (e.g., \fB\\^\fP, \fB\\-\fP, \fB\\\\\fP, \fB\\]\fP)
+.RE
+
+Special meaning of characters in a character class is lost
+when escaped or for: \fB^\fP not at beginning, \fB-\fP at
+beginning or at end.
+
+An escape sequence consists of the character \fB\\\fP followed
+by a single character: \fB\\n\fP newline, \fB\\t\fP tab,
+\fB\\\fP\fIc\fP the character \fIc\fP (including \fB\\\fP).
+
+.SS Options
+.TP
+\fB-i\fP
+ignore case
+.TP
+\fB-n\fP
+prefix line number in output
+.TP
+\fB-v\fP
+emit lines that do not match the pattern
+
+.SH EXAMPLE
+To print lines ending in a Pascal keyword or identifier:
+.nf
+.RS
+$ \fBfind\fP [a-zA-Z][a-zA-Z0-9]*$
+.RE
+.fi
