@@ -156,7 +156,9 @@ main(int argc, char **argv)
   if (cmd) {
     toolname = *argv;
     me = makeident(progname, *argv);
-    return cmd(argc, argv);
+    r = cmd(argc, argv);
+    free((void *) me);
+    return r;
   }
 
   usage("no such command: %s", *argv);
