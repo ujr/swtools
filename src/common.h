@@ -18,6 +18,9 @@
 #define SHIFTARGS(ac, av, n) do { (ac)-=n; (av)+=n; } while (0)
 #define UNUSED(x) (void)(x)  /* to suppress "unused parameter" warnings */
 
+#define ESC '\\'
+#define DASH '-'
+
 typedef int toolfun(int argc, char **argv);
 
 extern const char *me;  /* for error messages */
@@ -37,6 +40,8 @@ extern jmp_buf errjmp;  /* longjmp here to give up */
 const char *getprog(char **argv);
 size_t scanint(const char *s, int *v);
 size_t scanspace(const char *s);
+char escape(const char *s, size_t *pi);
+size_t dodash(const char *s, size_t i, char delim, strbuf *buf);
 FILE *openin(const char *filepath);
 FILE *openout(const char *filepath);
 void filecopy(FILE *fin, FILE *fout);

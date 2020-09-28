@@ -6,13 +6,8 @@
 #include "common.h"
 #include "strbuf.h"
 
-#define ESC '\\'
-#define DASH '-'
-
 static int parseargs(int argc, char **argv,
   bool *allbut, strbuf *src, strbuf *dst);
-static int dodash(const char *s, char delim, strbuf *buf);
-static char escape(const char *s, int *n);
 static int xindex(bool allbut, strbuf *sb, int c, int lastdst);
 static int index(const char *s, size_t slen, int c);
 static void usage(const char *msg);
@@ -84,7 +79,7 @@ parseargs(int argc, char **argv,
 
   /* the src argument is mandatory */
   if (i < argc && argv[i]) {
-    dodash(argv[i++], '\0', src);
+    dodash(argv[i++], 0, '\0', src);
   }
   else {
     usage("the src argument is missing");
@@ -93,7 +88,7 @@ parseargs(int argc, char **argv,
 
   /* the dst argument is optional */
   if (i < argc && argv[i]) {
-    dodash(argv[i++], '\0', dst);
+    dodash(argv[i++], 0, '\0', dst);
   }
 
   /* expect no more arguments */
@@ -108,50 +103,6 @@ parseargs(int argc, char **argv,
   }
 
   return argc;
-}
-
-/* dodash: expand dashes and escapes in sz until delim */
-static int
-dodash(const char *sz, char delim, strbuf *buf)
-{
-  const char *p = sz; int n;
-  while (*p && *p != delim) {
-    if (*p == ESC) { strbuf_addc(buf, escape(p, &n)); p += n; } // escape
-    else if (*p != DASH) strbuf_addc(buf, *p++); // normal character
-    else if (p == sz || p[1] == 0) strbuf_addc(buf, *p++); // literal dash
-    else if (p[-1] <= p[+1]) { // character range
-      for (char c = p[-1]+1; c <= p[1]; c++) {
-        strbuf_addc(buf, c);
-      }
-      p += 2; // skip dash and upper bound
-    }
-    else strbuf_addc(buf, *p++);
-  }
-  assert(buf->buf[buf->len] == '\0'); // this is guaranteed by strbuf
-  return p-sz; // #chars scanned
-}
-
-/* escape: return escaped character at *s, set n to #chars scanned */
-static char
-escape(const char *sz, int *n)
-{
-  *n = 1;
-  if (sz[0] != ESC) return *sz; // not escaped
-  if (sz[1] == 0) return ESC; // not special at end
-  *n += 1;
-  switch (sz[1]) {
-    case '\\': return '\\';
-    case 'a': return '\a';
-    case 'b': return '\b';
-    case 'e': return '\033';
-    case 'f': return '\f';
-    case 'n': return '\n';
-    case 'r': return '\r';
-    case 't': return '\t';
-    case 'v': return '\v';
-    case '0': return '\0';
-  }
-  return sz[1];
 }
 
 /* xindex: conditionally invert result from index */

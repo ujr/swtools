@@ -56,6 +56,55 @@ scanspace(const char *s)
   return p - s; // #chars scanned
 }
 
+/* escape: return escaped character at s[i], update i */
+char
+escape(const char *s, size_t *pi)
+{
+  char c = s[*pi];
+  *pi += 1;
+  if (c != ESC) return c; /* not escaped */
+  c = s[*pi];
+  if (c == 0) return ESC; /* not special at end */
+  *pi += 1;
+  switch (c) {
+    case '\\': return '\\';
+    case 'a': return '\a';
+    case 'b': return '\b';
+    case 'e': return '\033';
+    case 'f': return '\f';
+    case 'n': return '\n';
+    case 'r': return '\r';
+    case 't': return '\t';
+    case 'v': return '\v';
+    case '0': return '\0';
+  }
+  return c;
+}
+
+/* dodash: expand dashes and escapes in s[i..] until delim, return i just after */
+size_t
+dodash(const char *s, size_t i, char delim, strbuf *buf)
+{
+  size_t i0 = i;
+  while (s[i] && s[i] != delim) {
+    if (s[i] == ESC)
+      strbuf_addc(buf, escape(s, &i)); // escape
+    else if (s[i] != DASH)
+      strbuf_addc(buf, s[i++]); // normal character
+    else if (i == i0 || s[i+1] == delim || s[i+1] == 0)
+      strbuf_addc(buf, DASH), ++i; // literal dash at start or end
+    else if (s[i-1] <= s[i+1]) { // character range
+      for (char c = s[i-1]+1; c <= s[i+1]; c++) {
+        strbuf_addc(buf, c);
+      }
+      i += 2; // skip dash and upper bound
+    }
+    else strbuf_addc(buf, s[i++]);
+  }
+  assert(buf->buf[buf->len] == '\0'); // guaranteed by strbuf
+  return i;
+}
+
 /* openin: open existing file for reading, default to stdin */
 FILE *
 openin(const char *filepath)
