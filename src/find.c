@@ -66,8 +66,7 @@ findcmd(int argc, char **argv)
 static bool
 getpat(const char *arg, strbuf *pat)
 {
-  strbuf_addz(pat, arg);
-  return true;
+  return makepat(arg, '\0', pat) > 0;
 }
 
 static void
