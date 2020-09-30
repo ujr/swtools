@@ -463,6 +463,42 @@ Such a tool, in combination with *translit*, *sort*, and
 for indicating spelling problems or glossary terms.
 But not today.
 
+## Find patterns in lines
+
+The next tool, called **find**, looks for input lines that
+match the given *pattern*. It corresponds to the well-known
+Unix grep(1) tool, though for only a limited subset of
+*regular expressions* and fewer options.
+
+The pattern matching logic is straightforward except for
+closures (the `*` operator), which use a backtracking
+approach. “Real” implementations of regular expression
+matching compile the pattern into an automaton that
+can do the matching in a single pass over the input
+without backtracking, though I did not investigate.
+
+The C implementation of *find* is very close to the
+Pascal code from the book. The only major differences
+are that I do not pass indices by reference (`var` in
+Pascal) but instead choose appropriate return values,
+that I use C's capability to return anywhere from a
+function, and the strbuf library for growable strings.
+
+The problem with Pascal `var` arguments is that you
+cannot see that arguments are passed by reference,
+which makes for hard-to-read code. (C# requires the
+`ref` keyword to be present in method signatures
+*and* in method invocations, so it is immediately
+obvious where arguments are passed by reference.)
+
+Here are some patterns to test: `^` and `$` match
+each line, whereas `^$` only matches empty lines,
+and `^[ \t]*$` matches blank lines.
+
+TODO option `-i` to ignore case (cf ex 5-9)  
+TODO metacharacter `+` for one or more (cf ex 5-10)
+
+
 ## Possible Improvements
 
 - count: accept arguments that name files
