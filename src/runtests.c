@@ -9,6 +9,7 @@
 extern void buf_test(int *pnumpass, int *pnumfail);
 extern void strbuf_test(int *pnumpass, int *pnumfail);
 extern void sorting_test(int *pnumpass, int *pnumfail);
+extern void regex_test(int *pnumpass, int *pnumfail);
 extern void utils_test(int *pnumpass, int *pnumfail);
 
 const char *me = "runtests";
@@ -25,6 +26,7 @@ main(int argc, char **argv)
   buf_test(&numpass, &numfail);
   strbuf_test(&numpass, &numfail);
   sorting_test(&numpass, &numfail);
+  regex_test(&numpass, &numfail);
   utils_test(&numpass, &numfail);
 
   SUMMARY(numpass, numfail);
