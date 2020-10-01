@@ -470,10 +470,10 @@ match the given *pattern*. It corresponds to the well-known
 Unix grep(1) tool, though for only a limited subset of
 *regular expressions* and fewer options.
 
-Option `-i` ignores case, option `-n` prefixes matched
-lines with their line number, and option `-v` emits those
-lines that do not match the pattern (exercise 5-9). If the
-search extends over multiple files (exercise 5-8), matches
+Option `-i` ignores case, option `-n` prefixes matched lines
+with their line number (exercise 5-20), and option `-v` emits
+those lines that do not match the pattern (exercise 5-9). If
+the search extends over multiple files (exercise 5-8), matches
 will be prefixed by the corresponding file name.
 
 The pattern matching logic is straightforward except for
@@ -506,6 +506,41 @@ Here are some patterns to test: `^` and `$` match
 each line, whereas `^$` only matches empty lines,
 and `^[ \t]*$` matches blank lines.
 
+## Change matched text
+
+With the pattern matching logic of *find* available,
+the next tool, **change**, allows changing the matched
+substrings. Change is often classified into three
+operations: *insertion*, *deletion*, and *replacement*;
+our tool will support all three. Essential is the
+possibility to refer to the matched text from the
+replacement text, which we do with the `&` operator.
+
+```sh
+change mispell misspell  # replace
+change " *$"             # delete trailing blanks
+change active in&        # prefix "in" (insert)
+change "a+b" "(&)"       # parenthesize
+change very "&, &"       # stronger emphasis
+change and "\&"          # escape for a literal ampersand
+```
+
+The C implementation is again close to the Pascal code
+in the book, with the exception that no special `DITTO`
+value is used in the prepared substitution string; instead,
+the literal `&` serves the purpose, and escaping is handled
+in `putsub`. This way all possible char value are allowed.
+
+With the tools so far it is possible to reverse
+the order of the lines in a file:
+
+```sh
+find -n $ | sort -r -n | change "^[0-9]*:"
+```
+
+The remaining book chapters cover more substantial
+projects: a text editor, a text formatter, and a
+macro processor.
 
 
 ## Possible Improvements
@@ -515,6 +550,9 @@ and `^[ \t]*$` matches blank lines.
 - print: parameters for offset and count
 - sort: acccept multiple file arguments
 - unique: options -d and -f (as in sort)
+- find, change: predefined classes: %u %l %w etc.
+  (for upper, lower, alnum, etc.)
+- find, change: word boundary zero-width pat elem
 
 ## Book Chapters and Tools
 

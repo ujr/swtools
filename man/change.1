@@ -1,0 +1,35 @@
+.TH CHANGE 1 July\ 2019 local
+
+.SH NAME
+change \- change patterns in text
+
+.SH SYNOPSIS
+\fBchange\fP \fIpattern\fP [\fIreplacement\fP]
+
+.SH DESCRIPTION
+\fBchange\fP copies standard input to standard output
+except that each non-overlapping string that matches
+\fIpattern\fP is replaced by the string \fIreplacement\fP.
+A non-existent \fIreplacement\fP implies deletion of the
+matched string. The patterns accepted by \fBchange\fP are
+the same as those used by \fBfind\fP(1).
+.PP
+The replacement string consists of zero or more of the
+following elements:
+.RS
+.TP
+\fIc\fP
+literal character
+.TP
+\fB&\fP
+the matched string
+.TP
+\fB\\\fIc\fR
+escaped character \fIc\fP (e.g., \fB\\&\fP)
+.RE
+
+.SH EXAMPLE
+To parenthesize all sums and differences of identifiers:
+.nf
+$ \fBchange\fP "[a-zA-Z][a-zA-Z0-9]*[ ]*[+-][ ]*[a-zA-Z][a-zA-Z0-9]*" "(&)"
+.fi

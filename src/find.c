@@ -108,7 +108,7 @@ parseopts(int argc, char **argv)
   int i;
   for (i = 1; i < argc && argv[i]; i++) {
     const char *p = argv[i];
-    if (*p != '-' || streq(p, "p")) break; /* no more option args */
+    if (*p != '-' || streq(p, "-")) break; /* no more option args */
     if (streq(p, "--")) { ++i; break; } /* end of option args */
     for (++p; *p; p++) {
       switch (*p) {

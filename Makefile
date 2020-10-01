@@ -20,11 +20,12 @@ tests: bin/runtests
 
 TOOLS = obj/copy.o obj/count.o obj/echo.o obj/detab.o obj/translit.o \
   obj/compare.o obj/include.o obj/concat.o obj/print.o obj/sort.o \
-  obj/unique.o obj/shuffle.o obj/find.o
+  obj/unique.o obj/shuffle.o obj/find.o obj/change.o
 bin/quux: obj/main.o $(TOOLS) obj/strbuf.o obj/sorting.o obj/lines.o obj/regex.o obj/utils.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 symlinks: bin/quux
+	ln -sf quux bin/change
 	ln -sf quux bin/compare
 	ln -sf quux bin/concat
 	ln -sf quux bin/copy

@@ -26,13 +26,15 @@
 #define NCCL    '!'
 #define LITCHAR 'c'
 
-#define CLOSIZE 1 /* size of closure entry (* and +) */
+#define CLOSIZE  1  /* size of closure entry (* and +) */
+#define DITTO   '&'
 
 static void stclose(strbuf *pat, size_t i);
 static int getccl(const char *s, int i, strbuf *pat);
 static int omatch(const char *lin, int i, const char *pat, int j, int flags);
 static bool locate(char c, const char *pat, int j);
 static int patsize(const char *pat, int i);
+static void putsub(const char *line, int i, int k, const char *sub, strbuf *out);
 
 size_t
 makepat(const char *s, int delim, strbuf *pat)
@@ -227,4 +229,60 @@ patsize(const char *pat, int i)
   }
   printerr("patsize: can't happen");
   abort();
+}
+
+size_t
+makesub(const char *s, int delim, strbuf *sub)
+{
+  size_t i = 0;
+
+  for (; s[i] && s[i] != delim; i++) {
+    strbuf_addc(sub, s[i]);
+  }
+
+  if (s[i] != delim) return 0; /* missing delim */
+  if (strbuf_failed(sub)) return 0; /* nomem */
+
+  return i;
+}
+
+void
+subline(const char *line, const char *pat, int flags, const char *sub, strbuf *out)
+{
+  int i = 0;
+  int lastm = -1;
+
+  while (line[i]) {
+    int m = amatch(line, i, pat, 0, flags);
+    if (m >= 0 && m != lastm) {
+      /* replace matched text */
+      putsub(line, i, m, sub, out);
+      lastm = m;
+    }
+
+    if (m < 0 || m == i) {
+      /* no match or null match */
+      strbuf_addc(out, line[i]);
+      i += 1;
+    }
+    else i = m; /* skip matched text */
+  }
+}
+
+static void
+putsub(const char *line, int i, int k, const char *sub, strbuf *out)
+{
+  size_t j = 0;
+  while (sub[j]) {
+    if (sub[j] == ESC)
+      strbuf_addc(out, escape(sub, &j));
+    else if (sub[j] == DITTO) {
+      strbuf_addb(out, line+i, k-i);
+      j += 1;
+    }
+    else {
+      strbuf_addc(out, sub[j]);
+      j += 1;
+    }
+  }
 }

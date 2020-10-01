@@ -27,6 +27,7 @@ struct {
   { "unique", uniquecmd },
   { "shuffle", shufflecmd },
   { "find", findcmd },
+  { "change", changecmd },
   { 0, 0 }
 };
 

@@ -11,4 +11,7 @@ size_t makepat(const char *s, int delim, strbuf *pat);
 int match(const char *line, const char *pat, int flags);
 int amatch(const char *line, int i, const char *pat, int j, int flags);
 
+size_t makesub(const char *s, int delim, strbuf *sub);
+void subline(const char *line, const char *pat, int flags, const char *sub, strbuf *out);
+
 #endif
