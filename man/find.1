@@ -1,16 +1,19 @@
 .TH FIND 1 July\ 2019 local
 
 .SH NAME
-find \- find patterns in text
+find \- print lines matching a pattern
 
 .SH SYNOPSIS
-\fBfind\fP [-i] [-n] [-v] \fIpattern\fP
+\fBfind\fP [-i] [-n] [-v] \fIpattern\fP [\fIfiles\fP]
 
 .SH DESCRIPTION
-\fBfind\fP reads standard input a line at a time and writes
-to standard output those lines that match the specified
-\fIpattern\fP. A text pattern is a concatenation of the
-following elements:
+\fBfind\fP reads the given \fIfiles\fP (or standard input)
+a line at a time and writes to standard output those lines
+that match the specified \fIpattern\fP. If multiple files
+are specified, each match is prefixed by the corresponding
+file name.
+
+A text pattern is a concatenation of the following elements:
 
 .RS
 .TP
@@ -33,7 +36,7 @@ character class (any one of these characters)
 negated character class (all but these characters)
 .TP
 \fB*\fP
-closure (zero or more occurrences of previous element)
+zero or more occurrences of previous element (closure)
 .TP
 \fB\\\fP\fIc\fP
 escaped character (e.g., \fB\\^\fP, \fB\\[\fP, \fB\\*\fP)

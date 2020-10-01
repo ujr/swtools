@@ -7,12 +7,13 @@
 #include "strbuf.h"
 
 static bool getpat(const char *arg, strbuf *pat);
-static void dofile(FILE *fp, const char *pat);
+static void dofile(FILE *fp, const char *pat, const char *fn);
 static int parseopts(int argc, char **argv);
 static int usage(const char *errmsg);
 
 static bool ignorecase = false;
 static bool showlineno = false;
+static bool showname = false;
 static bool invert = false;
 static bool showhelp = false;
 
@@ -39,10 +40,12 @@ findcmd(int argc, char **argv)
   pat = strbuf_ptr(&patbuf);
 
   if (argc > 1) {
+    showname = argc > 2;
     for (int i = 1; i < argc; i++) {
-      FILE *fp = openin(argv[i]);
+      const char *fn = argv[i];
+      FILE *fp = openin(fn);
       if (!fp) { r = FAILSOFT; continue; }
-      dofile(fp, pat);
+      dofile(fp, pat, fn);
       if (ferror(fp)) {
         printerr(argv[i]);
         r = FAILSOFT;
@@ -51,7 +54,8 @@ findcmd(int argc, char **argv)
     }
   }
   else {
-    dofile(stdin, pat);
+    showname = false;
+    dofile(stdin, pat, 0);
     if (ferror(stdin)) {
       printerr("error reading input");
       r = FAILSOFT;
@@ -66,23 +70,30 @@ findcmd(int argc, char **argv)
 static bool
 getpat(const char *arg, strbuf *pat)
 {
+  strbuf_trunc(pat, 0);
   return makepat(arg, '\0', pat) > 0;
 }
 
 static void
-dofile(FILE *fp, const char *pat)
+dofile(FILE *fp, const char *pat, const char *fn)
 {
   const char *line;
   strbuf linebuf = {0};
   long lineno = 0;
   int pos;
+  int flags = regex_none;
+  
+  if (!fn) fn = "-"; /* stdin */
+  if (ignorecase)
+    flags |= regex_ignorecase;
 
   while (getline(&linebuf, '\n', fp) > 0) {
     lineno += 1;
     line = strbuf_ptr(&linebuf);
-    pos = match(line, pat);
+    pos = match(line, pat, flags);
     if (invert ^ (pos >= 0)) {
-      if (showlineno) fprintf(stdout, "%ld:%d ", lineno, pos+1);
+      if (showname) fprintf(stdout, "%s:", fn);
+      if (showlineno) fprintf(stdout, "%ld:", lineno);
       fputs(line, stdout);
     }
     strbuf_trunc(&linebuf, 0);

@@ -470,6 +470,12 @@ match the given *pattern*. It corresponds to the well-known
 Unix grep(1) tool, though for only a limited subset of
 *regular expressions* and fewer options.
 
+Option `-i` ignores case, option `-n` prefixes matched
+lines with their line number, and option `-v` emits those
+lines that do not match the pattern (exercise 5-9). If the
+search extends over multiple files (exercise 5-8), matches
+will be prefixed by the corresponding file name.
+
 The pattern matching logic is straightforward except for
 closures (the `*` operator), which use a backtracking
 approach. “Real” implementations of regular expression
@@ -495,7 +501,6 @@ Here are some patterns to test: `^` and `$` match
 each line, whereas `^$` only matches empty lines,
 and `^[ \t]*$` matches blank lines.
 
-TODO option `-i` to ignore case (cf ex 5-9)  
 TODO metacharacter `+` for one or more (cf ex 5-10)
 
 

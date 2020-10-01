@@ -1,4 +1,5 @@
 
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,7 +29,7 @@
 
 static void stclose(strbuf *pat, size_t i);
 static int getccl(const char *s, int i, strbuf *pat);
-static int omatch(const char *lin, int i, const char *pat, int j);
+static int omatch(const char *lin, int i, const char *pat, int j, int flags);
 static bool locate(char c, const char *pat, int j);
 static int patsize(const char *pat, int i);
 
@@ -109,12 +110,12 @@ getccl(const char *s, int i, strbuf *pat)
 
 /* match line against pat; return pos of match or -1 */
 int
-match(const char *line, const char *pat)
+match(const char *line, const char *pat, int flags)
 {
   int i, pos;
   if (!line || !pat) return -1;
   for (i=0, pos=-1; line[i] && pos < 0; i++) {
-    pos = amatch(line, i, pat, 0);
+    pos = amatch(line, i, pat, 0, flags);
   }
   return pos < 0 ? -1 : i-1;
 }
@@ -136,7 +137,7 @@ amatch(const char *line, int i, const char *pat, int j)
 
 /* anchored match: line[i..] against pat[j..] */
 int
-amatch(const char *lin, int i, const char *pat, int j)
+amatch(const char *lin, int i, const char *pat, int j, int flags)
 {
   /* for each elem in pat:
   //   if elem is *:
@@ -154,7 +155,7 @@ amatch(const char *lin, int i, const char *pat, int j)
       j += patsize(pat, j);
       base = i;
       while (lin[i]) {
-        r = omatch(lin, i, pat, j);
+        r = omatch(lin, i, pat, j, flags);
         if (r < 0) break;
         i += r;
       }
@@ -162,13 +163,13 @@ amatch(const char *lin, int i, const char *pat, int j)
       /* match rest of lin against rest of pat */
       /* on failure, try again one char earlier */
       while (i >= base) {
-        k = amatch(lin, i, pat, j+patsize(pat, j));
+        k = amatch(lin, i, pat, j+patsize(pat, j), flags);
         if (k >= 0) break; /* matched */
         i -= 1; /* retry with closure one shorter */
       }
       return k;
     }
-    r = omatch(lin, i, pat, j);
+    r = omatch(lin, i, pat, j, flags);
     if (r < 0) return -1;
     j += patsize(pat, j);
     i += r;
@@ -178,12 +179,14 @@ amatch(const char *lin, int i, const char *pat, int j)
 
 /* match one element; return 0 or 1 on match, -1 on mismatch */
 static int
-omatch(const char *lin, int i, const char *pat, int j)
+omatch(const char *lin, int i, const char *pat, int j, int flags)
 {
+  int ignorecase = flags & regex_ignorecase;
   if (!lin[i]) return false;
   switch (pat[j]) {
     case LITCHAR:
-      return lin[i] == pat[j+1] ? 1 : -1;
+      return lin[i] == pat[j+1] ||
+        (ignorecase && tolower(lin[i]) == tolower(pat[j+1])) ? 1 : -1;
     case ANY:
       return lin[i] != '\n' && lin[i] != '\0' ? 1 : -1;
     case BOL:
@@ -193,9 +196,10 @@ omatch(const char *lin, int i, const char *pat, int j)
     case CCL:
       return locate(lin[i], pat, j+1) ? 1 : -1;
     case NCCL:
-      return lin[i] != '\n' && lin[i] != '\0' && !locate(lin[i], pat, j+1) ? 1 : -1;
+      return lin[i] != '\n' && lin[i] != '\0' &&
+        !locate(lin[i], pat, j+1) ? 1 : -1;
   }
-  printerr("patsize; can't happen");
+  printerr("omatch: can't happen");
   abort();
 }
 
