@@ -16,16 +16,17 @@
  */
 
 #define CLOSURE '*'
+#define ONEPLUS '+'
 #define BOL     '^'
 #define EOL     '$'
-#define ANY     '?'
+#define ANY     '.'
 #define CCL     '['
 #define CCLEND  ']'
 #define NEGATE  '^'
 #define NCCL    '!'
 #define LITCHAR 'c'
 
-#define CLOSIZE 1 /* size of closure entry */
+#define CLOSIZE 1 /* size of closure entry (* and +) */
 
 static void stclose(strbuf *pat, size_t i);
 static int getccl(const char *s, int i, strbuf *pat);
@@ -56,13 +57,14 @@ makepat(const char *s, int delim, strbuf *pat)
     else if (c == CCL) {
       i = getccl(s, i, pat);
     }
-    else if (c == CLOSURE && i > 0) {
-      j = lastj;
-      if ((c=strbuf_ptr(pat)[j]) == BOL || c == EOL || c == CLOSURE)
+    else if ((c == CLOSURE || c == ONEPLUS) && i > 0) {
+      char prev = strbuf_ptr(pat)[lastj];
+      if (prev == BOL || prev == EOL || prev == CLOSURE || prev == ONEPLUS)
         return 0; /* invalid pattern: ^*, $*, ** are not allowed */
-      strbuf_addc(pat, CLOSURE);
+      strbuf_addc(pat, c);
       /* rearrange pat so * comes before the element it applies to */
-      stclose(pat, j);
+      stclose(pat, lastj);
+      j = lastj;
       i++;
     }
     else {
@@ -120,24 +122,9 @@ match(const char *line, const char *pat, int flags)
   return pos < 0 ? -1 : i-1;
 }
 
-#if 0
-int
-amatch(const char *line, int i, const char *pat, int j)
-{
-  /* PRELIMINARY - with some metacharacters */
-  while (pat[j]) {
-    int r = omatch(line, i, pat, j);
-    if (r < 0) return -1; /* mismatch */
-    i += r;
-    j += patsize(pat, j);
-  }
-  return i; /* matched; next pos in input */
-}
-#endif
-
 /* anchored match: line[i..] against pat[j..] */
 int
-amatch(const char *lin, int i, const char *pat, int j, int flags)
+amatch(const char *line, int i, const char *pat, int j, int flags)
 {
   /* for each elem in pat:
   //   if elem is *:
@@ -149,27 +136,32 @@ amatch(const char *lin, int i, const char *pat, int j, int flags)
   //   if not omatch: return failure
   // return success
   */
-  int base, k, r;
-  while (pat[j]) {
-    if (pat[j] == CLOSURE) {
+  int elem, start, k, r;
+  while ((elem = pat[j])) {
+    if (elem == CLOSURE || elem == ONEPLUS) {
       j += patsize(pat, j);
-      base = i;
-      while (lin[i]) {
-        r = omatch(lin, i, pat, j, flags);
+      start = i;
+      while (line[i]) {
+        r = omatch(line, i, pat, j, flags);
         if (r < 0) break;
         i += r;
+      }
+      if (elem == ONEPLUS) {
+        /* must match at least once */
+        if (i == start) return -1;
+        start += 1;
       }
       /* now lin[i] is where the closure failed */
       /* match rest of lin against rest of pat */
       /* on failure, try again one char earlier */
-      while (i >= base) {
-        k = amatch(lin, i, pat, j+patsize(pat, j), flags);
+      while (i >= start) {
+        k = amatch(line, i, pat, j+patsize(pat, j), flags);
         if (k >= 0) break; /* matched */
         i -= 1; /* retry with closure one shorter */
       }
       return k;
     }
-    r = omatch(lin, i, pat, j, flags);
+    r = omatch(line, i, pat, j, flags);
     if (r < 0) return -1;
     j += patsize(pat, j);
     i += r;
@@ -179,25 +171,25 @@ amatch(const char *lin, int i, const char *pat, int j, int flags)
 
 /* match one element; return 0 or 1 on match, -1 on mismatch */
 static int
-omatch(const char *lin, int i, const char *pat, int j, int flags)
+omatch(const char *line, int i, const char *pat, int j, int flags)
 {
   int ignorecase = flags & regex_ignorecase;
-  if (!lin[i]) return false;
+  if (!line[i]) return false;
   switch (pat[j]) {
     case LITCHAR:
-      return lin[i] == pat[j+1] ||
-        (ignorecase && tolower(lin[i]) == tolower(pat[j+1])) ? 1 : -1;
+      return line[i] == pat[j+1] ||
+        (ignorecase && tolower(line[i]) == tolower(pat[j+1])) ? 1 : -1;
     case ANY:
-      return lin[i] != '\n' && lin[i] != '\0' ? 1 : -1;
+      return line[i] != '\n' && line[i] != '\0' ? 1 : -1;
     case BOL:
       return i == 0 ? 0 : -1;
     case EOL:
-      return lin[i] == '\n' || lin[i] == '\0' ? 0 : -1;
+      return line[i] == '\n' || line[i] == '\0' ? 0 : -1;
     case CCL:
-      return locate(lin[i], pat, j+1) ? 1 : -1;
+      return locate(line[i], pat, j+1) ? 1 : -1;
     case NCCL:
-      return lin[i] != '\n' && lin[i] != '\0' &&
-        !locate(lin[i], pat, j+1) ? 1 : -1;
+      return line[i] != '\n' && line[i] != '\0' &&
+        !locate(line[i], pat, j+1) ? 1 : -1;
   }
   printerr("omatch: can't happen");
   abort();
@@ -220,13 +212,17 @@ static int
 patsize(const char *pat, int i)
 {
   switch (pat[i]) {
-    case LITCHAR: return 2;
-    case BOL: return 1;
-    case EOL: return 1;
-    case ANY: return 1;
-    case CCL: case NCCL:
+    case LITCHAR:
+      return 2;
+    case BOL:
+    case EOL:
+    case ANY:
+      return 1;
+    case CCL:
+    case NCCL:
       return 2 + pat[i+1];
     case CLOSURE:
+    case ONEPLUS:
       return CLOSIZE;
   }
   printerr("patsize: can't happen");

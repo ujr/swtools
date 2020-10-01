@@ -483,6 +483,11 @@ matching compile the pattern into an automaton that
 can do the matching in a single pass over the input
 without backtracking, though I did not investigate.
 
+Support for the “one or more” operator `+` is easy
+to implement once “zero or more” `*` closures are
+working (exercise 5-10). Note that other than in the
+book, I use `.` instead of `?` to match any character.
+
 The C implementation of *find* is very close to the
 Pascal code from the book. The only major differences
 are that I do not pass indices by reference (`var` in
@@ -501,7 +506,6 @@ Here are some patterns to test: `^` and `$` match
 each line, whereas `^$` only matches empty lines,
 and `^[ \t]*$` matches blank lines.
 
-TODO metacharacter `+` for one or more (cf ex 5-10)
 
 
 ## Possible Improvements

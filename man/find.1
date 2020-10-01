@@ -20,8 +20,8 @@ A text pattern is a concatenation of the following elements:
 \fIc\fP
 literal character \fIc\fP
 .TP
-\fB?\fP
-any character except newline
+\fB.\fP
+any character except newline (dot)
 .TP
 \fB^\fP
 beginning of line
@@ -37,6 +37,9 @@ negated character class (all but these characters)
 .TP
 \fB*\fP
 zero or more occurrences of previous element (closure)
+.TP
+\fB+\fP
+one or more occurrences of previous element (closure)
 .TP
 \fB\\\fP\fIc\fP
 escaped character (e.g., \fB\\^\fP, \fB\\[\fP, \fB\\*\fP)
