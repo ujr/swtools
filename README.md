@@ -3,7 +3,7 @@
 This is a glimpse at the classic *Software Tools in Pascal*
 by Brian W. Kernighan and P. J. Plauger (Addison-Wesley, 1981).
 It can still be bought at [Amazon][amazon] or may be found
-in your local library.
+in your local library. See the book's [blurb](doc/Blurb.md).
 
 Going through the lessons may seem odd from a 2019 perspective,
 but I consider it a rite of passage. In this project a selection

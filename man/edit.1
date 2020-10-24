@@ -1,0 +1,155 @@
+.TH EDIT 1 October\ 2020 local
+
+.SH NAME
+edit \- edit text files
+
+.SH SYNOPSIS
+\fBedit\fP [file]
+
+.SH DESCRIPTION
+\fBedit\fP is an interactive text editor that reads command
+lines from its input and writes display information, upon
+command, to its output. It works by reading text files on
+command into an internal "buffer" (which may be quite large),
+displaying and modifying the buffer contents by other commands,
+then writing all or part of the buffer to text files, also on
+command. The buffer is organized as a sequence of lines,
+numbered from 1; lines are implicitly renumbered as text
+is added or deleted.
+
+Context searches and substitutions are specified by writing
+text patterns, following the same rules for building patterns
+as used by \fBfind\fP. Substitutions specify replacement text
+following the same rules as used by the program \fBchange\fP.
+
+Line numbers are formed from the following components:
+.RS
+.TP
+\fIn\fP
+a decimal number
+.TP
+\fB.\fP
+the current line ("dot")
+.TP
+\fB$\fP
+the last line
+.TP
+\fB/\fIpat\fB/\fR
+a forward context search
+.TP
+\fB?\fIpat\fB?\fR
+a backward context search
+.RE
+
+Components may be combined with \fB+\fP or \fB-\fP, as in,
+for example,
+.RS
+.TP
+\fB.+1\fP
+sum of \fB.\fP and 1
+.TP
+\fB$-5\fP
+five lines before \fB$\fP
+.RE
+
+Line numbers are separated by commas or semicolons;
+a semicolon sets the current line to the most recent
+line number before proceeding.
+
+Commands may be preceded by an arbitrary number of
+line numbers (except for \fBe\fP, \fBf\fP and \fBq\fP,
+which require that none be present). The last one or
+two are used as needed. If two line numbers are needed
+and only one is specified, it is used for both. If no
+line numbers are specified, a default rule is applied:
+.RS
+.TP
+(.)
+use the current line
+.TP
+(.+1)
+use the next line
+.TP
+(.,.)
+use the current line for both line numbers
+.TP
+(1,$)
+use all lines
+.RE
+
+In alphabetical order, the commands and their default
+line numbers are:
+.RS
+.TP
+(.) \fBa\fP
+append text after line (text follows)
+.TP
+(.,.) \fBc\fP
+change text (text follows)
+.TP
+(.,.) \fBdp\fP
+delete text
+.TP
+\fBe\fP \fIfile\fP
+edit \fIfile\fP after discarding all previous text, remember file name
+.TP
+\fBf\fP \fIfile\fP
+print file name, remember file name
+.TP
+(.) \fBi\fP
+insert text before line (text follows)
+.TP
+(.,.) \fBm\fP \fIline3\fP \fBp\fP
+move text to after \fIline3\fP
+.TP
+(.,.) \fBp\fP
+print text
+.TP
+(.) \fBr\fP \fIfile\fP
+read \fIfile\fP, appending after line
+.TP
+(.,.) \fBs\fP/\fIpat\fP/\fInew\fP/\fBgp\fP
+substitute \fInew\fP for occurrence of \fIpat\fP
+(\fBg\fP implies for each occurrence across line)
+.TP
+(1,$) \fBw\fP \fIfile\fP
+write \fIfile\fP (leaves current state unaltered)
+.TP
+(.) \fB=p\fP
+print line number
+.TP
+(.+1) \fInewline\fP
+print one line
+.RE
+
+The trailing \fBp\fP, which is optional, causes the last affected
+line to be printed. Dot is set to the last affected line, except
+for \fBf\fP, \fBw\fP, and \fB=\fP, for which it is unchanged.
+
+Text entered with \fBa\fP, \fBc\fP, and \fBi\fP is terminated
+with a line containing just a '\fB.\fP'.
+
+The global prefixes cause repeated execution of a command,
+once for each line that matches (\fBg\fP) or does not match
+(\fBx\fP) a specified text pattern:
+.RS
+.TP
+(1,$) \fBg\fP/\fIpattern\fP/\fIcommand\fP
+.TP
+(1,$) \fBx\fP/\fIpattern\fP/\fIcommand\fP
+.RE
+
+\fIcommand\fP can be anything but \fBa\fP, \fBc\fP, \fBi\fP,
+\fBq\fP, and may be preceded by line numbers as usual.
+Dot is set to the matched line before \fIcommand\fP is done.
+
+If the command line argument \fIfile\fP is present, then the
+editor behaves as if its input began with the command \fBe\fP
+\fIfile\fP. The first filename used is remembered, so that a
+subsequent \fBe\fP, \fBf\fP, \fBr\fP, or \fBw\fP command can
+be written with no filename to refer to the remembered filename.
+A filename given with \fBe\fP or \fBf\fP replaces any remembered
+filename.
+
+.SH EXAMPLE
+Don't be silly.

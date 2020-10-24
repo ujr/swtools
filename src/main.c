@@ -28,6 +28,7 @@ struct {
   { "shuffle", shufflecmd },
   { "find", findcmd },
   { "change", changecmd },
+  { "edit", editcmd },
   { 0, 0 }
 };
 

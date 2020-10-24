@@ -67,3 +67,4 @@ int uniquecmd(int argc, char **argv);
 int shufflecmd(int argc, char **argv);
 int findcmd(int argc, char **argv);
 int changecmd(int argc, char **argv);
+int editcmd(int argc, char **argv);

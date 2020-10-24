@@ -542,6 +542,21 @@ The remaining book chapters cover more substantial
 projects: a text editor, a text formatter, and a
 macro processor.
 
+## Text Editing
+
+The book's chapter 6 is devoted to a text editor
+similar to the standard Unix **ed**(1) editor.
+It is the largest program in the book and can be
+roughly broken into three parts: (1) the buffer,
+upon which (2) the commands operate, and (3) the
+input parsing.
+
+The editor is not like today's screen editors. It is
+driven by commands that may be entered interactively,
+or read from a script file. This makes it a valuable
+tool, but somewhat inconvenient for interactive use,
+at least when compared to today's editors.
+See the manual page for details.
 
 ## Possible Improvements
 
