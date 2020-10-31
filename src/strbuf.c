@@ -18,6 +18,15 @@
 #define NEXTSIZE(sp)  GROWFUNC(SIZE(sp))   /* next default size */
 #define SETFAILED(sp) ((sp)->size |= 1)      /* set lsb to flag */
 
+void
+strbuf_init(strbuf *sp)
+{
+  assert(sp != 0);
+  sp->buf = 0;
+  sp->len = 0;
+  sp->size = 0;
+}
+
 int /* append the string buffer sq */
 strbuf_add(strbuf *sp, strbuf *sq)
 {

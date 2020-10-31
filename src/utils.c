@@ -22,7 +22,7 @@ getprog(char **argv)
 }
 
 /* scanint: scan a decimal integer number, return #chars read */
-size_t
+size_t /* TODO consider int scanint(const char *s, int *pidx) */
 scanint(const char *s, int *v)
 {
   int neg, n;
@@ -54,6 +54,14 @@ scanspace(const char *s)
   const char *p = s;
   while (isspace(*p)) ++p;
   return p - s; // #chars scanned
+}
+
+void
+skipblank(const char *s, int *pidx)
+{
+  const char blank = ' ';
+  const char tab = '\t';
+  while (s[*pidx] == blank || s[*pidx] == tab) *pidx += 1;
 }
 
 /* escape: return escaped character at s[i], update i */

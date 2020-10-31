@@ -558,6 +558,23 @@ tool, but somewhat inconvenient for interactive use,
 at least when compared to today's editors.
 See the manual page for details.
 
+The input to the editor is thus a series of commands,
+one per line, each of which looking like
+
+```text
+line1,line2 command stuff
+```
+
+where *line1*, *line2* and *stuff* are optional.
+This entails a main loop of the form
+
+```text
+while getline(linebuf, stdin):
+  get list of line numbers from linebuf
+  if status is OK:
+    do command
+```
+
 ## Possible Improvements
 
 - count: accept arguments that name files

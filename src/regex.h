@@ -9,8 +9,9 @@ enum regex_flags {
   regex_ignorecase = 1
 };
 
-/* make s into a pattern for match(); return index of delim */
+/* make s into a pattern for match(); return index of delim, 0 on error */
 size_t makepat(const char *s, int delim, strbuf *pat);
+void clearpat(strbuf *pat);
 
 /* match pat against line; return pos of match or -1 */
 int match(const char *line, const char *pat, int flags);

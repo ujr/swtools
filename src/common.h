@@ -40,6 +40,7 @@ extern jmp_buf errjmp;  /* longjmp here to give up */
 const char *getprog(char **argv);
 size_t scanint(const char *s, int *v);
 size_t scanspace(const char *s);
+void skipblank(const char *s, int *pidx);
 char escape(const char *s, size_t *pi);
 size_t dodash(const char *s, size_t i, char delim, strbuf *buf);
 FILE *openin(const char *filepath);

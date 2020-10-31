@@ -78,6 +78,12 @@ makepat(const char *s, int delim, strbuf *pat)
   return i;
 }
 
+void
+clearpat(strbuf *sp)
+{
+  strbuf_trunc(sp, 0);
+}
+
 /* insert pat[n-1] at pat[i] */
 static void
 stclose(strbuf *pat, size_t i)

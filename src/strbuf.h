@@ -18,7 +18,9 @@ typedef struct strbuf {
    allocation failed).
 
    A strbuf MUST be initialized as in `strbuf sb = {0};`
-   to start in the unallocated state!
+   to start in the unallocated state! Alternatively, say
+   `strbuf_init(&sb);` (but doing so on an allocated strbuf
+   results in a memory leak).
 
    The buffer size is always even, its least significant bit
    thus always zero and terefore redundant; we use it as the
@@ -37,6 +39,7 @@ int strbuf_addb(strbuf *sp, const char *buf, size_t len);
 int strbuf_addf(strbuf *sp, const char *fmt, ...);
 int strbuf_addfv(strbuf *sp, const char *fmt, va_list ap);
 
+void strbuf_init(strbuf *sp);
 int strbuf_ready(strbuf *sp, size_t dlen);
 void strbuf_trunc(strbuf *sp, size_t len);
 void strbuf_free(strbuf *sp);
@@ -44,6 +47,7 @@ void strbuf_free(strbuf *sp);
 /* Define short names */
 
 #ifndef STRBUF_NO_SHORT_NAMES
+#define sbinit   strbuf_init
 #define sbptr    strbuf_ptr
 #define sbchar   strbuf_char
 #define sblen    strbuf_len
