@@ -66,7 +66,6 @@ unique(FILE *fin, bool count, FILE *fout)
       temp = sp0; sp0 = sp1; sp1 = temp;
       num = 1;
     }
-    strbuf_trunc(sp1, 0);
   }
 
   if (count) fprintf(fout, "%zd\t", num);

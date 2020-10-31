@@ -56,7 +56,6 @@ changecmd(int argc, char **argv)
     subline(line, pat, flags, sub, &outbuf);
     fputs(strbuf_ptr(&outbuf), stdout);
     strbuf_trunc(&outbuf, 0);
-    strbuf_trunc(&linebuf, 0);
   }
 
   strbuf_free(&linebuf);

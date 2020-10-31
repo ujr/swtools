@@ -82,7 +82,7 @@ dofile(FILE *fp, const char *pat, const char *fn)
   long lineno = 0;
   int pos;
   int flags = regex_none;
-  
+
   if (!fn) fn = "-"; /* stdin */
   if (ignorecase)
     flags |= regex_ignorecase;
@@ -96,7 +96,6 @@ dofile(FILE *fp, const char *pat, const char *fn)
       if (showlineno) fprintf(stdout, "%ld:", lineno);
       fputs(line, stdout);
     }
-    strbuf_trunc(&linebuf, 0);
   }
 
   strbuf_free(&linebuf);

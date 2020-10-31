@@ -138,20 +138,20 @@ filecopy(FILE *ifp, FILE *ofp)
   }
 }
 
-/* getline: append chars up to (and including) the first delim,
-   return num chars appended, 0 on EOF, -1 on error */
+/* getline: read chars up to (and including) the first delim,
+   return num chars read, 0 on EOF, -1 on error */
 int
 getline(strbuf *sp, int delim, FILE *fp)
 {
   int c;
-  size_t l0, l1;
-  l0 = strbuf_len(sp);
+  size_t len;
+  strbuf_trunc(sp, 0);
   while ((c = getc(fp)) != EOF && c != delim) {
     strbuf_addc(sp, c);
   }
   if (c == delim) strbuf_addc(sp, c);
-  l1 = strbuf_len(sp);
-  return strbuf_failed(sp) || ferror(fp) ? -1 : (int)(l1 - l0);
+  len = strbuf_len(sp);
+  return strbuf_failed(sp) || ferror(fp) ? -1 : (int) len;
 }
 
 /* getln: read line from fp into buf[0..len-1], realloc if needed,

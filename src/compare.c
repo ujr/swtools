@@ -48,9 +48,7 @@ comparecmd(int argc, char **argv)
 
   for (;;) {
     lineno += 1;
-    strbuf_trunc(&line1, 0);
     n1 = getline(&line1, '\n', fp1);
-    strbuf_trunc(&line2, 0);
     n2 = getline(&line2, '\n', fp2);
     if (n1 <= 0 || n2 <= 0) break;
     if (!equal(strbuf_ptr(&line1), strbuf_ptr(&line2))) {
