@@ -585,6 +585,7 @@ while getline(linebuf, stdin):
 - find, change: predefined classes: %u %l %w etc.
   (for upper, lower, alnum, etc.)
 - find, change: word boundary zero-width pat elem
+- edit: prompt on q (ex 6-2) if input from tty
 
 ## Book Chapters and Tools
 

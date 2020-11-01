@@ -1,5 +1,6 @@
 
 #include <ctype.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,19 +11,26 @@
 #include "regex.h"
 #include "strbuf.h"
 
+static void debug(const char *fmt, ...);
 static int parseopts(int argc, char **argv);
 static void usage(const char *errmsg);
 
 #define MIN(x,y) ((x)<(y)?(x):(y))
 
-#define ACMD     'a'
-#define PCMD     'p'
-#define QCMD     'q'
+#define ACMD     'a'    /* append (after current line) */
+#define CCMD     'c'    /* change (replace) line(s) */
+#define DCMD     'd'    /* delete */
+#define ICMD     'i'    /* insert (before current line) */
+#define MCMD     'm'    /* move line(s) */
+#define PCMD     'p'    /* print */
+#define QCMD     'q'    /* quit */
+#define EQCMD    '='    /* show line number */
+
 #define NEWLINE  '\n'
 #define CURLINE  '.'
 #define LASTLINE '$'
 #define SCAN     '/'
-#define SCANBACK '?'
+#define SCANBACK '\\'
 
 typedef struct {
   const char *z;
@@ -59,7 +67,7 @@ static void bufinit(edstate *ped); /* init buffer (only line zero, scratch file)
 static void buffree(edstate *ped); /* release resources (memory, scratch file, whatever) */
 static bufitem makebuf(const char *z);
 static void reverse(bufitem *buf, int n1, int n2); /* helper for bufmove */
-static void bufmove(edstate *ped, int n1, int n2, int n3); /* move lines n1..n2 after n3 */
+static void bufmove(bufitem *buf, int n1, int n2, int n3); /* move lines n1..n2 after n3 */
 static const char *bufget(edstate *ped, int n); /* get line n for editing */
 static opstate bufput(edstate *ped, const char *line); /* add after curln */
 static const char *copyline(const char *z); /* malloc'ed copy */
@@ -67,9 +75,12 @@ static const char *copyline(const char *z); /* malloc'ed copy */
 //static void putmark(edstate *ped, int n, char mark);
 
 /* doing the commands */
-static opstate docmd(edstate *ped, const char *line, int *pi, bool glob);
+static opstate docmd(edstate *ped, const char *cmd, int *pi, bool glob);
+static opstate checkp(const char *cmd, int *pi, bool *ppflag);
 static opstate doprint(edstate *ped, int n1, int n2);
 static opstate doappend(edstate *ped, int n, bool glob);
+static opstate dodelete(edstate *ped, int n1, int n2);
+static opstate domove(edstate *ped, int n3);
 static void message(const char *msg);
 
 int
@@ -137,6 +148,7 @@ editcmd(int argc, char **argv)
   r = SUCCESS;
 
 done:
+  strbuf_free(&cmdbuf);
   strbuf_free(&ed.linebuf);
   strbuf_free(&ed.patbuf);
   buffree(&ed);
@@ -236,10 +248,11 @@ getnum(edstate *ped, const char *line, int *pi, int *pnum)
   }
 
   if (line[*pi] == SCAN || line[*pi] == SCANBACK) {
+    char direction = line[*pi];
     if (optpat(ped, line, pi) == ED_ERR)
       return ED_ERR;
     *pi += 1;
-    return patscan(ped, line[*pi], pnum);
+    return patscan(ped, direction, pnum);
   }
 
   return ED_END;
@@ -350,9 +363,8 @@ reverse(bufitem *buf, int n1, int n2)
 }
 
 static void /* move lines n1..n2 after n3 */
-bufmove(edstate *ped, int n1, int n2, int n3)
+bufmove(bufitem *buf, int n1, int n2, int n3)
 {
-  bufitem *buf = ped->buffer;
   if (n3 < n1 - 1) {
     reverse(buf, n3+1, n1-1);
     reverse(buf, n1, n2);
@@ -375,18 +387,20 @@ bufget(edstate *ped, int n)
   return strbuf_ptr(&ped->linebuf);
 }
 
-static opstate /* add after curln */
+static opstate /* add line after curln */
 bufput(edstate *ped, const char *line)
 {
   bufitem newitem;
+  int m;
   const char *l = copyline(line);
   if (!l) return ED_ERR;
   /* append at end of buffer */
   newitem = makebuf(l);
+  m = (int) buf_size(ped->buffer);
   buf_push(ped->buffer, newitem);
   ped->lastln += 1;
   /* move into place, i.e., to after current line */
-  bufmove(ped, ped->lastln, ped->lastln, ped->curln);
+  bufmove(ped->buffer, m, m, ped->curln);
   ped->curln += 1;
   return ED_OK;
 }
@@ -404,38 +418,102 @@ copyline(const char *z)
 }
 
 static opstate
-docmd(edstate *ped, const char *line, int *pi, bool glob)
+docmd(edstate *ped, const char *cmd, int *pi, bool glob)
 {
   opstate status = ED_ERR;
   bool pflag = false;
-  char cc = line[*pi];
-  char nc = cc ? line[*pi+1] : 0;
+  int line3;
+  char cc = cmd[*pi];
+  char nc = 0;
+
+  if (cc) {
+    *pi += 1;
+    nc = cmd[*pi];
+  }
 
   switch (cc) {
-    case PCMD:
-      if (nc == NEWLINE)
-        if ((status = defaultlines(ped, ped->curln, ped->curln)) == ED_OK)
-          status = doprint(ped, ped->line1, ped->line2);
-      break;
     case NEWLINE:
       if (ped->nlines == 0)
         ped->line2 = nextln(ped, ped->curln);
       status = doprint(ped, ped->line2, ped->line2);
       break;
+    case PCMD:
+      if (nc == NEWLINE)
+        if ((status = defaultlines(ped, ped->curln, ped->curln)) == ED_OK)
+          status = doprint(ped, ped->line1, ped->line2);
+      break;
     case ACMD:
       if (nc == NEWLINE)
         status = doappend(ped, ped->line2, glob);
+      break;
+    case ICMD:
+      if (nc == NEWLINE)
+        status = ped->line2 == 0
+          ? doappend(ped, 0, glob)
+          : doappend(ped, prevln(ped, ped->line2), glob);
+      break;
+    case CCMD:
+      if (nc == NEWLINE)
+        if ((status = defaultlines(ped, ped->curln, ped->curln)) == ED_OK)
+          if ((status = dodelete(ped, ped->line1, ped->line2)) == ED_OK)
+            status = doappend(ped, prevln(ped, ped->line1), glob);
+      break;
+    case DCMD:
+      if ((status = checkp(cmd, pi, &pflag)) == ED_OK) {
+        if ((status = defaultlines(ped, ped->curln, ped->curln)) == ED_OK) {
+          status = dodelete(ped, ped->line1, ped->line2);
+          if (status == ED_OK && nextln(ped, ped->curln) != 0)
+            ped->curln = nextln(ped, ped->curln);
+        }
+      }
+      break;
+    case MCMD:
+      status = getone(ped, cmd, pi, &line3);
+      if (status == ED_END) status = ED_ERR;
+      if (status == ED_OK)
+        if ((status = checkp(cmd, pi, &pflag)) == ED_OK)
+          if ((status = defaultlines(ped, ped->curln, ped->curln)) == ED_OK)
+            status = domove(ped, line3);
+      break;
+    case EQCMD:
+      if ((status = checkp(cmd, pi, &pflag)) == ED_OK)
+        printf("%d\n", ped->line2); /* line2 defaults to curln */
       break;
     case QCMD:
       if (nc == NEWLINE && ped->nlines == 0 && !glob)
         status = ED_END;
       break;
-    /* etc. */
+/* BEGIN DEBUG */
+    case '?':
+      debug("{nlines=%d, line1=%d, line2=%d, curln=%d, lastln=%d}\n",
+        ped->nlines, ped->line1, ped->line2, ped->curln, ped->lastln);
+      { size_t n = buf_size(ped->buffer); size_t i;
+      debug("00: %s\n", ped->buffer[0].z);
+      for (i = 1; i < n; i++)
+        debug("%02zd: %s", i, ped->buffer[i].z); }
+      status = ED_OK;
+      break;
+/* END DEBUG */
   }
 
   if (status == ED_OK && pflag)
     status = doprint(ped, ped->curln, ped->curln);
   return status;
+}
+
+static opstate
+checkp(const char *cmd, int *pi, bool *ppflag)
+{
+  skipblank(cmd, pi);
+  if (cmd[*pi] == PCMD) {
+    *ppflag = true;
+    *pi += 1;
+    skipblank(cmd, pi);
+  }
+  else {
+    *ppflag = false;
+  }
+  return cmd[*pi] == NEWLINE || cmd[*pi] == 0 ? ED_OK : ED_ERR;
 }
 
 static opstate
@@ -472,10 +550,44 @@ doappend(edstate *ped, int n, bool glob)
   }
 }
 
+static opstate
+dodelete(edstate *ped, int n1, int n2)
+{
+  if (n1 <= 0 || n1 > n2 || n2 > ped->lastln)
+    return ED_ERR;
+  /* move lines to end of buffer and "forget" them there */
+  bufmove(ped->buffer, n1, n2, ped->lastln);
+  ped->lastln -= n2 - n1 + 1;
+  ped->curln = prevln(ped, n1);
+  debug("{del %d..%d: leave with lastln=%d curln=%d}\n",
+    n1, n2, ped->lastln, ped->curln);
+  return ED_OK;
+}
+
+static opstate
+domove(edstate *ped, int n3)
+{
+  if (ped->line1 <= 0 || (ped->line1 <= n3 && n3 <= ped->line2))
+    return ED_ERR;
+  bufmove(ped->buffer, ped->line1, ped->line2, n3);
+  if (n3 > ped->line1) ped->curln = n3;
+  else ped->curln = n3 + (ped->line2 - ped->line1 + 1);
+  return ED_OK;
+}
+
 static void
 message(const char *msg)
 {
   puts(msg); /* appends a newline */
+}
+
+static void
+debug(const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  vfprintf(stderr, fmt, ap);
+  va_end(ap);
 }
 
 static int
