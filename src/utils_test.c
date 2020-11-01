@@ -11,7 +11,7 @@ utils_test(int *pnumpass, int *pnumfail)
   int numpass = 0;
   int numfail = 0;
 
-  size_t i;
+  int i;
   const char *s;
   strbuf sb = {0};
 

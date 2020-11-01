@@ -70,7 +70,6 @@ findcmd(int argc, char **argv)
 static bool
 getpat(const char *arg, strbuf *pat)
 {
-  strbuf_trunc(pat, 0);
   return makepat(arg, '\0', pat) > 0;
 }
 

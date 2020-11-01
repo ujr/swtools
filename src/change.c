@@ -67,15 +67,13 @@ changecmd(int argc, char **argv)
 static bool
 getpat(const char *arg, strbuf *pat)
 {
-  strbuf_trunc(pat, 0);
   return makepat(arg, '\0', pat) > 0;
 }
 
 static bool
 getsub(const char *arg, strbuf *sub)
 {
-  strbuf_trunc(sub, 0);
-  return makesub(arg, '\0', sub) > 0;
+  return makesub(arg, '\0', sub) >= 0;
 }
 
 static int

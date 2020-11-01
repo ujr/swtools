@@ -36,11 +36,12 @@ static bool locate(char c, const char *pat, int j);
 static int patsize(const char *pat, int i);
 static void putsub(const char *line, int i, int k, const char *sub, strbuf *out);
 
-size_t
+int
 makepat(const char *s, int delim, strbuf *pat)
 {
-  size_t i = 0;
-  size_t lastj = strbuf_len(pat);
+  int i = 0;
+  size_t lastj = 0;
+  strbuf_trunc(pat, 0);
   while (s[i] != delim && s[i]) {
     size_t j = strbuf_len(pat);
     char c = s[i];
@@ -62,7 +63,7 @@ makepat(const char *s, int delim, strbuf *pat)
     else if ((c == CLOSURE || c == ONEPLUS) && i > 0) {
       char prev = strbuf_ptr(pat)[lastj];
       if (prev == BOL || prev == EOL || prev == CLOSURE || prev == ONEPLUS)
-        return 0; /* invalid pattern: ^*, $*, ** are not allowed */
+        return -1; /* invalid pattern: ^*, $*, ** are not allowed */
       strbuf_addc(pat, c);
       /* rearrange pat so * comes before the element it applies to */
       stclose(pat, lastj);
@@ -76,12 +77,6 @@ makepat(const char *s, int delim, strbuf *pat)
     lastj = j;
   }
   return i;
-}
-
-void
-clearpat(strbuf *sp)
-{
-  strbuf_trunc(sp, 0);
 }
 
 /* insert pat[n-1] at pat[i] */
@@ -237,33 +232,39 @@ patsize(const char *pat, int i)
   abort();
 }
 
-size_t
+int
 makesub(const char *s, int delim, strbuf *sub)
 {
-  size_t i = 0;
+  int i = 0;
+
+  strbuf_trunc(sub, 0);
 
   for (; s[i] && s[i] != delim; i++) {
     strbuf_addc(sub, s[i]);
   }
 
-  if (s[i] != delim) return 0; /* missing delim */
-  if (strbuf_failed(sub)) return 0; /* nomem */
+  if (s[i] != delim) return -1; /* missing delim */
+  if (strbuf_failed(sub)) return -1; /* nomem */
 
   return i;
 }
 
-void
+int
 subline(const char *line, const char *pat, int flags, const char *sub, strbuf *out)
 {
-  int i = 0;
-  int lastm = -1;
+  int i = 0, n = 0;
+  int m, lastm = -1;
+  int justone = (flags & regex_subjustone);
 
   while (line[i]) {
-    int m = amatch(line, i, pat, 0, flags);
+    if (justone && n > 0) m = -1;
+    else m = amatch(line, i, pat, 0, flags);
+
     if (m >= 0 && m != lastm) {
       /* replace matched text */
       putsub(line, i, m, sub, out);
       lastm = m;
+      n += 1;
     }
 
     if (m < 0 || m == i) {
@@ -273,12 +274,14 @@ subline(const char *line, const char *pat, int flags, const char *sub, strbuf *o
     }
     else i = m; /* skip matched text */
   }
+
+  return n;
 }
 
 static void
 putsub(const char *line, int i, int k, const char *sub, strbuf *out)
 {
-  size_t j = 0;
+  int j = 0;
   while (sub[j]) {
     if (sub[j] == ESC)
       strbuf_addc(out, escape(sub, &j));

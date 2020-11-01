@@ -35,7 +35,6 @@ regex_test(int *pnumpass, int *pnumfail)
 
 
   pat = "a^b$c";
-  strbuf_trunc(&patbuf, 0);
   s = makepat(pat, '\0', &patbuf);
   TEST("makepat a^b$c", s == 5 && STREQ("cac^cbc$cc", strbuf_ptr(&patbuf)));
   TEST("match xa^b$cz", Match("xa^b$cz", pat, 0) == 1);

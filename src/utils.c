@@ -66,7 +66,7 @@ skipblank(const char *s, int *pidx)
 
 /* escape: return escaped character at s[i], update i */
 char
-escape(const char *s, size_t *pi)
+escape(const char *s, int *pi)
 {
   char c = s[*pi];
   *pi += 1;
@@ -90,10 +90,10 @@ escape(const char *s, size_t *pi)
 }
 
 /* dodash: expand dashes and escapes in s[i..] until delim, return i just after */
-size_t
-dodash(const char *s, size_t i, char delim, strbuf *buf)
+int
+dodash(const char *s, int i, char delim, strbuf *buf)
 {
-  size_t i0 = i;
+  int i0 = i;
   while (s[i] && s[i] != delim) {
     if (s[i] == ESC)
       strbuf_addc(buf, escape(s, &i)); // escape

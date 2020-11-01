@@ -24,6 +24,7 @@ static void usage(const char *errmsg);
 #define MCMD     'm'    /* move line(s) */
 #define PCMD     'p'    /* print */
 #define QCMD     'q'    /* quit */
+#define SCMD     's'    /* substitute */
 #define EQCMD    '='    /* show line number */
 
 #define NEWLINE  '\n'
@@ -44,6 +45,7 @@ typedef struct {
   int curln;  /* current line: value of dot */
   int lastln; /* last line: value of $ */
   strbuf patbuf; /* search pattern */
+  strbuf subbuf; /* substitute text */
   strbuf linebuf; /* for line editing */
   bufitem *buffer;
   FILE *fin;  /* input commands */
@@ -52,12 +54,13 @@ typedef struct {
 /* status of operations: returned by most functions */
 typedef enum { ED_OK, ED_ERR, ED_END } opstate;
 
-/* getting the list of line numbers */
+/* getting the line numbers and command arguments */
 static opstate getlist(edstate *ped, const char *line, int *pi);
 static opstate getone(edstate *ped, const char *line, int *pi, int *pnum);
 static opstate getnum(edstate *ped, const char *line, int *pi, int *pnum);
 static opstate optpat(edstate *ped, const char *line, int *pi);
 static opstate patscan(edstate *ped, char direction, int *pnum);
+static opstate getsub(edstate *ped, const char *cmd, int *pi, bool *gflag);
 static opstate defaultlines(edstate *ped, int def1, int def2);
 static int nextln(edstate *ped, int n);
 static int prevln(edstate *ped, int n);
@@ -81,6 +84,7 @@ static opstate doprint(edstate *ped, int n1, int n2);
 static opstate doappend(edstate *ped, int n, bool glob);
 static opstate dodelete(edstate *ped, int n1, int n2);
 static opstate domove(edstate *ped, int n3);
+static opstate dosubst(edstate *ped, bool gflag, bool glob);
 static void message(const char *msg);
 
 int
@@ -264,7 +268,7 @@ optpat(edstate *ped, const char *line, int *pi)
   size_t n;
 
   if (line[*pi] == 0 || line[*pi+1] == 0) {
-    clearpat(&ped->patbuf);
+    strbuf_trunc(&ped->patbuf, 0);
     return ED_ERR;
   }
 
@@ -273,10 +277,9 @@ optpat(edstate *ped, const char *line, int *pi)
     return ED_OK;
   }
 
-  clearpat(&ped->patbuf);
   n = makepat(line+*pi+1, line[*pi], &ped->patbuf);
   if (n == 0) {
-    clearpat(&ped->patbuf);
+    strbuf_trunc(&ped->patbuf, 0);
     return ED_ERR;
   }
 
@@ -302,6 +305,28 @@ patscan(edstate *ped, char direction, int *pnum)
   } while (n != ped->curln);
 
   return ED_ERR;
+}
+
+static opstate /* get right-hand-side of "s" command */
+getsub(edstate *ped, const char *cmd, int *pi, bool *gflag)
+{
+  int n;
+  char delim;
+  if (!cmd[*pi] || !cmd[*pi+1])
+    return ED_ERR;
+  delim = cmd[*pi];
+  *pi += 1;
+  n = makesub(cmd+*pi, delim, &ped->subbuf);
+  if (n < 0)
+    return ED_ERR;
+  *pi += n;
+  *pi += 1;
+  if (cmd[*pi] == 'g') {
+    *pi += 1;
+    *gflag = true;
+  }
+  else *gflag = false;
+  return ED_OK;
 }
 
 static opstate /* set defaulted line numbers */
@@ -422,6 +447,7 @@ docmd(edstate *ped, const char *cmd, int *pi, bool glob)
 {
   opstate status = ED_ERR;
   bool pflag = false;
+  bool gflag = false;
   int line3;
   char cc = cmd[*pi];
   char nc = 0;
@@ -475,6 +501,13 @@ docmd(edstate *ped, const char *cmd, int *pi, bool glob)
           if ((status = defaultlines(ped, ped->curln, ped->curln)) == ED_OK)
             status = domove(ped, line3);
       break;
+    case SCMD:
+      if ((status = optpat(ped, cmd, pi)) == ED_OK)
+        if ((status = getsub(ped, cmd, pi, &gflag)) == ED_OK)
+          if ((status = checkp(cmd, pi, &pflag)) == ED_OK)
+            if ((status = defaultlines(ped, ped->curln, ped->curln)) == ED_OK)
+              status = dosubst(ped, gflag, glob);
+      break;
     case EQCMD:
       if ((status = checkp(cmd, pi, &pflag)) == ED_OK)
         printf("%d\n", ped->line2); /* line2 defaults to curln */
@@ -516,7 +549,7 @@ checkp(const char *cmd, int *pi, bool *ppflag)
   return cmd[*pi] == NEWLINE || cmd[*pi] == 0 ? ED_OK : ED_ERR;
 }
 
-static opstate
+static opstate /* print lines n1..n2 */
 doprint(edstate *ped, int n1, int n2)
 {
   int i;
@@ -529,7 +562,7 @@ doprint(edstate *ped, int n1, int n2)
   return ED_OK;
 }
 
-static opstate
+static opstate /* append input lines after line n */
 doappend(edstate *ped, int n, bool glob)
 {
   if (glob)
@@ -550,7 +583,7 @@ doappend(edstate *ped, int n, bool glob)
   }
 }
 
-static opstate
+static opstate /* delete lines n1..n2 */
 dodelete(edstate *ped, int n1, int n2)
 {
   if (n1 <= 0 || n1 > n2 || n2 > ped->lastln)
@@ -564,7 +597,7 @@ dodelete(edstate *ped, int n1, int n2)
   return ED_OK;
 }
 
-static opstate
+static opstate /* move line1..line2 to after line n3 */
 domove(edstate *ped, int n3)
 {
   if (ped->line1 <= 0 || (ped->line1 <= n3 && n3 <= ped->line2))
@@ -573,6 +606,41 @@ domove(edstate *ped, int n3)
   if (n3 > ped->line1) ped->curln = n3;
   else ped->curln = n3 + (ped->line2 - ped->line1 + 1);
   return ED_OK;
+}
+
+static opstate
+dosubst(edstate *ped, bool gflag, bool glob)
+{
+  opstate status;
+  strbuf newbuf = {0};
+  int flags = regex_none;
+  int n, subs;
+  const char *pat = strbuf_ptr(&ped->patbuf);
+  const char *sub = strbuf_ptr(&ped->subbuf);
+  debug("{subst %s for %s, gflag=%d}\n", sub, pat, gflag);
+
+  if (!gflag)
+    flags |= regex_subjustone;
+
+  status = glob ? ED_OK : ED_ERR;
+
+  for (n = ped->line1; n <= ped->line2; n++) {
+    const char *oldline = bufget(ped, n);
+    strbuf_trunc(&newbuf, 0);
+    subs = subline(oldline, pat, flags, sub, &newbuf);
+    if (subs > 0) {
+      const char *newline = strbuf_ptr(&newbuf);
+      status = dodelete(ped, n, n);
+      if (status != ED_OK) break;
+      status = bufput(ped, newline);
+      ped->line2 += ped->curln - n;
+      n = ped->curln;
+      if (status != ED_OK) break;
+    }
+  }
+
+  strbuf_free(&newbuf);
+  return status;
 }
 
 static void
