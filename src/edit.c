@@ -21,6 +21,7 @@ static void usage(const char *errmsg);
 #define CCMD     'c'    /* change (replace) line(s) */
 #define DCMD     'd'    /* delete */
 #define ICMD     'i'    /* insert (before current line) */
+#define JCMD     'j'    /* join lines */
 #define MCMD     'm'    /* move line(s) */
 #define PCMD     'p'    /* print */
 #define QCMD     'q'    /* quit */
@@ -84,6 +85,7 @@ static opstate doprint(edstate *ped, int n1, int n2);
 static opstate doappend(edstate *ped, int n, bool glob);
 static opstate dodelete(edstate *ped, int n1, int n2);
 static opstate domove(edstate *ped, int n3);
+static opstate dojoin(edstate *ped, int n1, int n2);
 static opstate dosubst(edstate *ped, bool gflag, bool glob);
 static void message(const char *msg);
 
@@ -355,7 +357,7 @@ static void /* init buffer (only line zero, scratch file) */
 bufinit(edstate *ped)
 {
   ped->buffer = 0;
-  buf_push(ped->buffer, makebuf("")); /* line zero */
+  buf_push(ped->buffer, makebuf("\n")); /* line zero */
 }
 
 static void /* release resources (memory, scratch file, whatever) */
@@ -402,14 +404,12 @@ bufmove(bufitem *buf, int n1, int n2, int n3)
   }
 }
 
-static const char * /* get line n for editing */
+static const char * /* get line n (immutable) */
 bufget(edstate *ped, int n)
 {
-  strbuf_trunc(&ped->linebuf, 0);
   if (n < 1 || n > ped->lastln)
-    return ped->buffer[0].z;
-  strbuf_addz(&ped->linebuf, ped->buffer[n].z);
-  return strbuf_ptr(&ped->linebuf);
+    return ped->buffer[0].z; /* always "\n" */
+  return ped->buffer[n].z;
 }
 
 static opstate /* add line after curln */
@@ -423,10 +423,10 @@ bufput(edstate *ped, const char *line)
   newitem = makebuf(l);
   m = (int) buf_size(ped->buffer);
   buf_push(ped->buffer, newitem);
-  ped->lastln += 1;
   /* move into place, i.e., to after current line */
   bufmove(ped->buffer, m, m, ped->curln);
   ped->curln += 1;
+  ped->lastln += 1;
   return ED_OK;
 }
 
@@ -500,6 +500,11 @@ docmd(edstate *ped, const char *cmd, int *pi, bool glob)
         if ((status = checkp(cmd, pi, &pflag)) == ED_OK)
           if ((status = defaultlines(ped, ped->curln, ped->curln)) == ED_OK)
             status = domove(ped, line3);
+      break;
+    case JCMD:
+      if ((status = checkp(cmd, pi, &pflag)) == ED_OK)
+        if ((status = defaultlines(ped, ped->curln, ped->curln+1)) == ED_OK)
+          status = dojoin(ped, ped->line1, ped->line2);
       break;
     case SCMD:
       if ((status = optpat(ped, cmd, pi)) == ED_OK)
@@ -608,6 +613,28 @@ domove(edstate *ped, int n3)
   return ED_OK;
 }
 
+static opstate /* join lines n1..n2 */
+dojoin(edstate *ped, int n1, int n2)
+{
+  int n, status;
+  if (n1 <= 0 || n1 > n2 || n2 > ped->lastln)
+    return ED_ERR;
+  if (n1 == n2) {
+    /* nothing to join, but set curln so xjp prints line x */
+    ped->curln = n1;
+    return ED_OK;
+  }
+  strbuf_trunc(&ped->linebuf, 0);
+  for (n = n1; n <= n2; n++) {
+    strbuf_addz(&ped->linebuf, bufget(ped, n));
+    strbuf_trunc(&ped->linebuf, strbuf_len(&ped->linebuf) - 1);
+  }
+  strbuf_addc(&ped->linebuf, '\n');
+  status = dodelete(ped, n1, n2);
+  if (status != ED_OK) return status;
+  return bufput(ped, strbuf_ptr(&ped->linebuf));
+}
+
 static opstate
 dosubst(edstate *ped, bool gflag, bool glob)
 {
@@ -615,6 +642,7 @@ dosubst(edstate *ped, bool gflag, bool glob)
   strbuf newbuf = {0};
   int flags = regex_none;
   int n, subs;
+  char *p;
   const char *pat = strbuf_ptr(&ped->patbuf);
   const char *sub = strbuf_ptr(&ped->subbuf);
   debug("{subst %s for %s, gflag=%d}\n", sub, pat, gflag);
@@ -630,9 +658,22 @@ dosubst(edstate *ped, bool gflag, bool glob)
     subs = subline(oldline, pat, flags, sub, &newbuf);
     if (subs > 0) {
       const char *newline = strbuf_ptr(&newbuf);
+      size_t len = strbuf_len(&newbuf);
+      /* must not remove trailing newline (we have j for that) */
+      if (len < 1 || newline[len-1] != '\n') {
+        status = ED_ERR;
+        break;
+      }
       status = dodelete(ped, n, n);
       if (status != ED_OK) break;
-      status = bufput(ped, newline);
+      /* but newlines injected shall split the line */
+      while (status == ED_OK && (p = strchr(newline, '\n'))) {
+        char saved = p[1];
+        p[1] = '\0';
+        status = bufput(ped, newline);
+        p[1] = saved;
+        newline = p+1;
+      }
       ped->line2 += ped->curln - n;
       n = ped->curln;
       if (status != ED_OK) break;

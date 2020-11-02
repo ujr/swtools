@@ -99,6 +99,9 @@ print file name, remember file name
 (.) \fBi\fP
 insert text before line (text follows)
 .TP
+(.,.+1) \fBjp\fP
+join lines by removing the newlines in-between
+.TP
 (.,.) \fBm\fP \fIline3\fP \fBp\fP
 move text to after \fIline3\fP
 .TP
@@ -110,7 +113,9 @@ read \fIfile\fP, appending after line
 .TP
 (.,.) \fBs\fP/\fIpat\fP/\fInew\fP/\fBgp\fP
 substitute \fInew\fP for occurrence of \fIpat\fP
-(\fBg\fP implies for each occurrence across line)
+(\fBg\fP implies for each occurrence across line);
+the trailing newline must not be removed, but
+injected newlines will split the line
 .TP
 (1,$) \fBw\fP \fIfile\fP
 write \fIfile\fP (leaves current state unaltered)
@@ -119,7 +124,7 @@ write \fIfile\fP (leaves current state unaltered)
 print line number
 .TP
 (.+1) \fInewline\fP
-print one line
+print the next line
 .RE
 
 The trailing \fBp\fP, which is optional, causes the last affected

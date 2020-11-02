@@ -575,6 +575,29 @@ while getline(linebuf, stdin):
     do command
 ```
 
+**Exercise 6-9** addresses a subtlety of the *substitute*
+command: what if the trailing newline is substituted away
+or an additional newline is substituted into existence?
+Two approaches seem reasonable: (1) prohibit *substitute*
+from matching or substituting a newline, or (2) make insertion
+split the line, and removal join two lines. In practice, a
+compromise might be best suited: (3) make insertion split
+the line, prohibit removal of the trailing newline, and
+have a specific *join* command `j` to join lines.
+Approach (3) is implemented here.
+
+**Exercise 6-12** demands a `u` command to undo the last
+substitute or, more generally, any command. Since lines in
+the buffer are immutable and deleted or old versions of lines
+are kept at the invisible end of the buffer, *undo* would
+restore those lines into place (or delete inserted lines).
+The editor would keep track of a tuple `(a,b,c,d)` (or a
+stack of such tuples) and *undo* would restore the previous
+state by replacing current lines `a,b` with “history” lines
+`c,d` (where `c` and `d` are offsets from `lastln` or
+negative to mean that lines `a,b` are to be removed only).
+Just a thought, not implemented.
+
 ## Possible Improvements
 
 - count: accept arguments that name files
