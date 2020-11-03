@@ -117,6 +117,13 @@ substitute \fInew\fP for occurrence of \fIpat\fP
 the trailing newline must not be removed, but
 injected newlines will split the line
 .TP
+(.,.) \fBt\fP/\fIsrc\fP/\fIdest\fP/\fBp\fP
+transliterate by mapping characters in \fIsrc\fP to
+corresponding characters in \fIdest\fP and deleting
+those with no corresponding characters in \fIdest\fP;
+the trailing newline cannot be changed, but any
+newlines introduced will split the line
+.TP
 (1,$) \fBw\fP \fIfile\fP
 write \fIfile\fP (leaves current state unaltered)
 .TP

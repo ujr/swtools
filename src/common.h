@@ -33,9 +33,9 @@ extern jmp_buf errjmp;  /* longjmp here to give up */
 #define putstr(s) fputs(s, stdout)
 #define getch getchar
 
-/* Utilities */
-
 #define streq(s,t) (0==strcmp((s),(t)))
+
+/* utils.c */
 
 const char *getprog(char **argv);
 size_t scanint(const char *s, int *v);
@@ -50,6 +50,11 @@ int getline(strbuf *sp, int delim, FILE *fp);
 int getln(char **buf, size_t *len, FILE *fp);
 void printerr(const char *msg);
 int checkioerr();
+
+/* translit.c */
+
+int index(const char *s, size_t slen, int c);
+int xindex(bool allbut, const char *s, size_t slen, int c, int lastdst);
 
 /* Command entry points */
 

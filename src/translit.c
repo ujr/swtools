@@ -2,14 +2,13 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "common.h"
 #include "strbuf.h"
 
 static int parseargs(int argc, char **argv,
   bool *allbut, strbuf *src, strbuf *dst);
-static int xindex(bool allbut, strbuf *sb, int c, int lastdst);
-static int index(const char *s, size_t slen, int c);
 static void usage(const char *msg);
 
 int
@@ -31,28 +30,30 @@ translitcmd(int argc, char **argv)
     return FAILSOFT;
   }
 
-  int dstlen = strbuf_len(&dst);
-  int srclen = strbuf_len(&src);
-  bool drop = dstlen <= 0; // dest is absent: drop src matches
-  bool squash = srclen > dstlen; // src is longer: squash runs
-  int lastdst = dstlen - 1; // if squashing: use this character
+  const char *s = strbuf_ptr(&src);
+  size_t slen = strbuf_len(&src);
+  const char *d = strbuf_ptr(&dst);
+  size_t dlen = strbuf_len(&dst);
+  bool drop = dlen <= 0; /* dest absent: drop src matches */
+  bool squash = slen > dlen || allbut; /* src longer: squash runs */
+  int lastdst = dlen - 1; /* if squashing: use this char */
 
   if (drop) {
     while ((c = getch()) != EOF) {
-      i = xindex(allbut, &src, c, lastdst);
-      if (i < 0) putch(c); // copy; else: drop
+      i = xindex(allbut, s, slen, c, lastdst);
+      if (i < 0) putch(c); /* copy; else: drop */
     }
   }
   else do {
-    i = xindex(allbut, &src, c = getch(), lastdst);
-    if (squash && i >= lastdst) { // squash
-      putch(dst.buf[lastdst]); // translate first
-      do i = xindex(allbut, &src, c = getch(), lastdst);
-      while (i >= lastdst); // drop remaining
+    i = xindex(allbut, s, slen, c = getch(), lastdst);
+    if (squash && i >= lastdst) {
+      putch(d[lastdst]); /* translate first char */
+      do i = xindex(allbut, s, slen, c = getch(), lastdst);
+      while (i >= lastdst); /* and drop remaining */
     }
     if (c != EOF) {
-      if (i >= 0) putch(dst.buf[i]); // translate
-      else putch(c); // no match: copy
+      if (i >= 0) putch(d[i]); /* translate */
+      else putch(c); /* no match: copy */
     }
   } while (c != EOF);
 
@@ -105,25 +106,22 @@ parseargs(int argc, char **argv,
   return argc;
 }
 
-/* xindex: conditionally invert result from index */
-static int
-xindex(bool allbut, strbuf *sb, int c, int lastdst)
+int /* conditionally invert result from index */
+xindex(bool allbut, const char *s, size_t slen, int c, int lastdst)
 {
   if (c == EOF) return -1;
-  if (!allbut) return index(sb->buf, sb->len, c);
-  if (index(sb->buf, sb->len, c) >= 0) return -1;
-  return lastdst+1; // request squashing
+  if (!allbut) return index(s, slen, c);
+  if (index(s, slen, c) >= 0) return -1;
+  return lastdst+1; /* request squashing */
 }
 
-/* index: return position of c in s, -1 if not found */
-static int
+int /* index of c in s[slen] or -1 */
 index(const char *s, size_t slen, int c)
 {
-  size_t i = 0;
+  const char *p;
   if (!s) return -1;
-  //while (s[i] && s[i] != c) ++i;
-  while (i < slen && s[i] != c) ++i;
-  return s[i] == c ? (int) i : -1;
+  p = memchr(s, c, slen);
+  return p ? p - s : -1;
 }
 
 /* usage: print usage and exit */

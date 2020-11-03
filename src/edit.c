@@ -26,6 +26,7 @@ static void usage(const char *errmsg);
 #define PCMD     'p'    /* print */
 #define QCMD     'q'    /* quit */
 #define SCMD     's'    /* substitute */
+#define TCMD     't'    /* transliterate */
 #define EQCMD    '='    /* show line number */
 
 #define NEWLINE  '\n'
@@ -56,12 +57,13 @@ typedef struct {
 typedef enum { ED_OK, ED_ERR, ED_END } opstate;
 
 /* getting the line numbers and command arguments */
-static opstate getlist(edstate *ped, const char *line, int *pi);
-static opstate getone(edstate *ped, const char *line, int *pi, int *pnum);
-static opstate getnum(edstate *ped, const char *line, int *pi, int *pnum);
-static opstate optpat(edstate *ped, const char *line, int *pi);
+static opstate getlist(edstate *ped, const char *cmd, int *pi);
+static opstate getone(edstate *ped, const char *cmd, int *pi, int *pnum);
+static opstate getnum(edstate *ped, const char *cmd, int *pi, int *pnum);
+static opstate optpat(edstate *ped, const char *cmd, int *pi);
 static opstate patscan(edstate *ped, char direction, int *pnum);
 static opstate getsub(edstate *ped, const char *cmd, int *pi, bool *gflag);
+static opstate gettrl(edstate *ped, const char *cmd, int *pi, bool *cflag);
 static opstate defaultlines(edstate *ped, int def1, int def2);
 static int nextln(edstate *ped, int n);
 static int prevln(edstate *ped, int n);
@@ -75,6 +77,7 @@ static void bufmove(bufitem *buf, int n1, int n2, int n3); /* move lines n1..n2 
 static const char *bufget(edstate *ped, int n); /* get line n for editing */
 static opstate bufput(edstate *ped, const char *line); /* add after curln */
 static const char *copyline(const char *z); /* malloc'ed copy */
+static opstate updateln(edstate *ped, int n, const char *lines);
 //static char getmark(edstate *ped, int n);
 //static void putmark(edstate *ped, int n, char mark);
 
@@ -87,6 +90,8 @@ static opstate dodelete(edstate *ped, int n1, int n2);
 static opstate domove(edstate *ped, int n3);
 static opstate dojoin(edstate *ped, int n1, int n2);
 static opstate dosubst(edstate *ped, bool gflag, bool glob);
+static opstate dotranslit(edstate *ped, bool allbut);
+
 static void message(const char *msg);
 
 int
@@ -132,6 +137,7 @@ editcmd(int argc, char **argv)
   ed.nlines = 0;
   strbuf_init(&ed.patbuf);
   strbuf_init(&ed.linebuf);
+  strbuf_init(&ed.subbuf);
 
   bufinit(&ed);
 
@@ -157,6 +163,7 @@ done:
   strbuf_free(&cmdbuf);
   strbuf_free(&ed.linebuf);
   strbuf_free(&ed.patbuf);
+  strbuf_free(&ed.subbuf);
   buffree(&ed);
   if (ed.fin != stdin)
     fclose(ed.fin);
@@ -164,23 +171,23 @@ done:
 }
 
 static opstate /* get list of line numbers */
-getlist(edstate *ped, const char *line, int *pi)
+getlist(edstate *ped, const char *cmd, int *pi)
 {
   int num;
   opstate status;
 
   ped->line2 = 0;
   ped->nlines = 0;
-  status = getone(ped, line, pi, &num);
+  status = getone(ped, cmd, pi, &num);
   while (status == ED_OK) {
     ped->line1 = ped->line2;
     ped->line2 = num;
     ped->nlines += 1;
-    if (line[*pi] == ';')
+    if (cmd[*pi] == ';')
       ped->curln = num;
-    if (line[*pi] == ',' || line[*pi] == ';') {
+    if (cmd[*pi] == ',' || cmd[*pi] == ';') {
       *pi += 1;
-      status = getone(ped, line, pi, &num);
+      status = getone(ped, cmd, pi, &num);
     }
     else
       break;
@@ -198,20 +205,20 @@ getlist(edstate *ped, const char *line, int *pi)
 }
 
 static opstate /* get one line number expr */
-getone(edstate *ped, const char *line, int *pi, int *pnum)
+getone(edstate *ped, const char *cmd, int *pi, int *pnum)
 {
   opstate status;
   int istart = *pi;
 
   *pnum = 0;
-  status = getnum(ped, line, pi, pnum); /* 1st term */
+  status = getnum(ped, cmd, pi, pnum); /* 1st term */
   while (status == ED_OK) {
-    skipblank(line, pi);
-    if (line[*pi] == '+' || line[*pi] == '-') { /* additive terms */
+    skipblank(cmd, pi);
+    if (cmd[*pi] == '+' || cmd[*pi] == '-') { /* additive terms */
       int nextnum;
-      int sign = line[*pi] == '+' ? 1 : -1;
+      int sign = cmd[*pi] == '+' ? 1 : -1;
       *pi += 1; /* skip the operator */
-      status = getnum(ped, line, pi, &nextnum);
+      status = getnum(ped, cmd, pi, &nextnum);
       if (status == ED_OK)
         *pnum += sign * nextnum;
       else if (status == ED_END)
@@ -231,31 +238,31 @@ getone(edstate *ped, const char *line, int *pi, int *pnum)
 }
 
 static opstate /* get a single line number term */
-getnum(edstate *ped, const char *line, int *pi, int *pnum)
+getnum(edstate *ped, const char *cmd, int *pi, int *pnum)
 {
-  skipblank(line, pi);
+  skipblank(cmd, pi);
 
-  if (isdigit(line[*pi])) {
-    size_t n = scanint(line+*pi, pnum);
+  if (isdigit(cmd[*pi])) {
+    size_t n = scanint(cmd+*pi, pnum);
     *pi += n;
     return ED_OK;
   }
 
-  if (line[*pi] == CURLINE) {
+  if (cmd[*pi] == CURLINE) {
     *pnum = ped->curln;
     *pi += 1;
     return ED_OK;
   }
 
-  if (line[*pi] == LASTLINE) {
+  if (cmd[*pi] == LASTLINE) {
     *pnum = ped->lastln;
     *pi += 1;
     return ED_OK;
   }
 
-  if (line[*pi] == SCAN || line[*pi] == SCANBACK) {
-    char direction = line[*pi];
-    if (optpat(ped, line, pi) == ED_ERR)
+  if (cmd[*pi] == SCAN || cmd[*pi] == SCANBACK) {
+    char direction = cmd[*pi];
+    if (optpat(ped, cmd, pi) == ED_ERR)
       return ED_ERR;
     *pi += 1;
     return patscan(ped, direction, pnum);
@@ -265,21 +272,21 @@ getnum(edstate *ped, const char *line, int *pi, int *pnum)
 }
 
 static opstate /* get optional search pattern */
-optpat(edstate *ped, const char *line, int *pi)
+optpat(edstate *ped, const char *cmd, int *pi)
 {
   size_t n;
 
-  if (line[*pi] == 0 || line[*pi+1] == 0) {
+  if (cmd[*pi] == 0 || cmd[*pi+1] == 0) {
     strbuf_trunc(&ped->patbuf, 0);
     return ED_ERR;
   }
 
-  if (line[*pi+1] == line[*pi]) {
+  if (cmd[*pi+1] == cmd[*pi]) {
     *pi += 1;
     return ED_OK;
   }
 
-  n = makepat(line+*pi+1, line[*pi], &ped->patbuf);
+  n = makepat(cmd+*pi+1, cmd[*pi], &ped->patbuf);
   if (n == 0) {
     strbuf_trunc(&ped->patbuf, 0);
     return ED_ERR;
@@ -328,6 +335,27 @@ getsub(edstate *ped, const char *cmd, int *pi, bool *gflag)
     *gflag = true;
   }
   else *gflag = false;
+  return ED_OK;
+}
+
+static opstate /* scan /src/dst/c for translit */
+gettrl(edstate *ped, const char *cmd, int *pi, bool *cflag)
+{
+  int i;
+  char delim;
+  if (!cmd[*pi] || !cmd[*pi+1]) return ED_ERR;
+  delim = cmd[*pi]; *pi += 1;
+  strbuf_trunc(&ped->linebuf, 0);
+  i = dodash(cmd, *pi, delim, &ped->linebuf);
+  if (cmd[i] != delim) return ED_ERR;
+  *pi = i+1;
+  if (!cmd[*pi]) return ED_ERR;
+  strbuf_trunc(&ped->subbuf, 0);
+  i = dodash(cmd, *pi, delim, &ped->subbuf);
+  if (cmd[i] != delim) return ED_ERR;
+  *pi = i+1;
+  *cflag = cmd[*pi] == 'c'; /* complement */
+  if (*cflag) *pi += 1;
   return ED_OK;
 }
 
@@ -442,12 +470,71 @@ copyline(const char *z)
   return memcpy(s, z, len+1);
 }
 
+static opstate /* replace line n with replacement line(s) */
+updateln(edstate *ped, int n, const char *lines)
+{
+  opstate status;
+  char *p;
+  size_t len = strlen(lines);
+  /* trailing newline is required */
+  if (len < 1 || lines[len-1] != '\n')
+    return ED_ERR;
+  status = dodelete(ped, n, n);
+  /* interior newlines will split the line */
+  while (status == ED_OK && (p = strchr(lines, '\n'))) {
+    char saved = p[1];
+    p[1] = '\0';
+    status = bufput(ped, lines);
+    p[1] = saved;
+    lines = p+1;
+  }
+  ped->line2 += ped->curln - n;
+  n = ped->curln;
+  return status;
+}
+
+static void
+translit(const char *oldline, bool allbut, strbuf *src, strbuf *dst, strbuf *out)
+{
+  const char *s = strbuf_ptr(src);
+  size_t slen = strbuf_len(src);
+  const char *d = strbuf_ptr(dst);
+  size_t dlen = strbuf_len(dst);
+  bool drop = dlen <= 0; /* no dst: drop src matches */
+  bool squash = slen > dlen || allbut; /* src longer: squash runs */
+  int lastdst = dlen - 1; /* if squashing: use this char */
+  char c;
+
+  debug("{translit src=%s, dst=%s, cflag=%d}\n", s, d, allbut);
+
+  if (drop) {
+    while ((c = *oldline++) && c != '\n') {
+      int j = xindex(allbut, s, slen, c, lastdst);
+      if (j < 0) strbuf_addc(out, c); /* copy; else drop */
+    }
+  }
+  else while ((c = *oldline++) && c != '\n') {
+    int j = xindex(allbut, s, slen, c, lastdst);
+    if (squash && j >= lastdst) {
+      strbuf_addc(out, d[lastdst]); /* translate first char*/
+      do j = xindex(allbut, s, slen, (c=*oldline++), lastdst);
+      while (c && c != '\n' && j >= lastdst); /* and drop remaining */
+    }
+    if (c && c != '\n') {
+      if (j >= 0) strbuf_addc(out, d[j]); /* translate */
+      else strbuf_addc(out, c); /* no match: copy */
+    }
+  }
+  strbuf_addc(out, '\n');
+}
+
 static opstate
 docmd(edstate *ped, const char *cmd, int *pi, bool glob)
 {
   opstate status = ED_ERR;
   bool pflag = false;
   bool gflag = false;
+  bool cflag; /* complement for translit */
   int line3;
   char cc = cmd[*pi];
   char nc = 0;
@@ -513,6 +600,12 @@ docmd(edstate *ped, const char *cmd, int *pi, bool glob)
             if ((status = defaultlines(ped, ped->curln, ped->curln)) == ED_OK)
               status = dosubst(ped, gflag, glob);
       break;
+    case TCMD:
+      if ((status = gettrl(ped, cmd, pi, &cflag)) == ED_OK)
+        if ((status = checkp(cmd, pi, &pflag)) == ED_OK)
+          if ((status = defaultlines(ped, ped->curln, ped->curln)) == ED_OK)
+            status = dotranslit(ped, cflag);
+      break;
     case EQCMD:
       if ((status = checkp(cmd, pi, &pflag)) == ED_OK)
         printf("%d\n", ped->line2); /* line2 defaults to curln */
@@ -526,8 +619,7 @@ docmd(edstate *ped, const char *cmd, int *pi, bool glob)
       debug("{nlines=%d, line1=%d, line2=%d, curln=%d, lastln=%d}\n",
         ped->nlines, ped->line1, ped->line2, ped->curln, ped->lastln);
       { size_t n = buf_size(ped->buffer); size_t i;
-      debug("00: %s\n", ped->buffer[0].z);
-      for (i = 1; i < n; i++)
+      for (i = 0; i < n; i++)
         debug("%02zd: %s", i, ped->buffer[i].z); }
       status = ED_OK;
       break;
@@ -635,14 +727,13 @@ dojoin(edstate *ped, int n1, int n2)
   return bufput(ped, strbuf_ptr(&ped->linebuf));
 }
 
-static opstate
+static opstate /* substitute on line1..line2 */
 dosubst(edstate *ped, bool gflag, bool glob)
 {
   opstate status;
   strbuf newbuf = {0};
   int flags = regex_none;
   int n, subs;
-  char *p;
   const char *pat = strbuf_ptr(&ped->patbuf);
   const char *sub = strbuf_ptr(&ped->subbuf);
   debug("{subst %s for %s, gflag=%d}\n", sub, pat, gflag);
@@ -658,26 +749,30 @@ dosubst(edstate *ped, bool gflag, bool glob)
     subs = subline(oldline, pat, flags, sub, &newbuf);
     if (subs > 0) {
       const char *newline = strbuf_ptr(&newbuf);
-      size_t len = strbuf_len(&newbuf);
-      /* must not remove trailing newline (we have j for that) */
-      if (len < 1 || newline[len-1] != '\n') {
-        status = ED_ERR;
-        break;
-      }
-      status = dodelete(ped, n, n);
-      if (status != ED_OK) break;
-      /* but newlines injected shall split the line */
-      while (status == ED_OK && (p = strchr(newline, '\n'))) {
-        char saved = p[1];
-        p[1] = '\0';
-        status = bufput(ped, newline);
-        p[1] = saved;
-        newline = p+1;
-      }
-      ped->line2 += ped->curln - n;
-      n = ped->curln;
+      status = updateln(ped, n, newline);
       if (status != ED_OK) break;
     }
+  }
+
+  strbuf_free(&newbuf);
+  return status;
+}
+
+static opstate /* transliterate on lines line1..line2 */
+dotranslit(edstate *ped, bool allbut)
+{
+  int n;
+  strbuf *src = &ped->linebuf;
+  strbuf *dst = &ped->subbuf;
+  strbuf newbuf = {0};
+  opstate status = ED_OK;
+
+  for (n = ped->line1; n <= ped->line2; n++) {
+    const char *oldline = bufget(ped, n);
+    strbuf_trunc(&newbuf, 0);
+    translit(oldline, allbut, src, dst, &newbuf);
+    status = updateln(ped, n, strbuf_ptr(&newbuf));
+    if (status != ED_OK) break;
   }
 
   strbuf_free(&newbuf);

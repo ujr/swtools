@@ -89,7 +89,7 @@ escape(const char *s, int *pi)
   return c;
 }
 
-/* dodash: expand dashes and escapes in s[i..] until delim, return i just after */
+/* dodash: expand dashes and escapes in s[i..] until delim, return i of delim */
 int
 dodash(const char *s, int i, char delim, strbuf *buf)
 {
@@ -109,7 +109,6 @@ dodash(const char *s, int i, char delim, strbuf *buf)
     }
     else strbuf_addc(buf, s[i++]);
   }
-  assert(buf->buf[buf->len] == '\0'); // guaranteed by strbuf
   return i;
 }
 
