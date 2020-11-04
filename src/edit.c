@@ -20,13 +20,17 @@ static void usage(const char *errmsg);
 #define ACMD     'a'    /* append (after current line) */
 #define CCMD     'c'    /* change (replace) line(s) */
 #define DCMD     'd'    /* delete */
+#define ECMD     'e'    /* edit file */
+#define FCMD     'f'    /* filename */
 #define ICMD     'i'    /* insert (before current line) */
 #define JCMD     'j'    /* join lines */
 #define MCMD     'm'    /* move line(s) */
 #define PCMD     'p'    /* print */
 #define QCMD     'q'    /* quit */
+#define RCMD     'r'    /* read file */
 #define SCMD     's'    /* substitute */
 #define TCMD     't'    /* transliterate */
+#define WCMD     'w'    /* write file */
 #define EQCMD    '='    /* show line number */
 
 #define NEWLINE  '\n'
@@ -49,8 +53,8 @@ typedef struct {
   strbuf patbuf; /* search pattern */
   strbuf subbuf; /* substitute text */
   strbuf linebuf; /* for line editing */
+  strbuf fnbuf; /* remembered filename */
   bufitem *buffer;
-  FILE *fin;  /* input commands */
 } edstate;
 
 /* status of operations: returned by most functions */
@@ -64,6 +68,7 @@ static opstate optpat(edstate *ped, const char *cmd, int *pi);
 static opstate patscan(edstate *ped, char direction, int *pnum);
 static opstate getsub(edstate *ped, const char *cmd, int *pi, bool *gflag);
 static opstate gettrl(edstate *ped, const char *cmd, int *pi, bool *cflag);
+static opstate getfn(edstate *ped, const char *cmd, int *pi);
 static opstate defaultlines(edstate *ped, int def1, int def2);
 static int nextln(edstate *ped, int n);
 static int prevln(edstate *ped, int n);
@@ -91,15 +96,15 @@ static opstate domove(edstate *ped, int n3);
 static opstate dojoin(edstate *ped, int n1, int n2);
 static opstate dosubst(edstate *ped, bool gflag, bool glob);
 static opstate dotranslit(edstate *ped, bool allbut);
+static opstate doread(edstate *ped, int n);
+static opstate dowrite(edstate *ped, int n1, int n2);
 
 static void message(const char *msg);
 
 int
 editcmd(int argc, char **argv)
 {
-  const char *fn;
-  const char *cmd;
-  int r, i, cursave;
+  int r;
   strbuf cmdbuf = {0};
   edstate ed;
   opstate status;
@@ -108,43 +113,32 @@ editcmd(int argc, char **argv)
   if (r < 0) return FAILHARD;
   SHIFTARGS(argc, argv, r);
 
-  i = (int) strlen("abc");
-  i = (int) strlen("x\n");
-
-  fn = 0;
-  if (argc > 0 && *argv) {
-    argc--;
-    fn = *argv++;
-  }
-
-  if (argc > 0 && *argv) {
+  if (argc > 1 && argv[0] && argv[1]) {
     usage("too many arguments");
     r = FAILHARD;
     goto done;
   }
 
-  if (fn) {
-    ed.fin = openin(fn);
-    if (!ed.fin) {
-      r = FAILSOFT;
-      goto done;
-    }
-  }
-  else ed.fin = stdin;
-
   ed.curln = ed.lastln = 0;
   ed.line1 = ed.line2 = 0;
   ed.nlines = 0;
-  strbuf_init(&ed.patbuf);
   strbuf_init(&ed.linebuf);
+  strbuf_init(&ed.patbuf);
   strbuf_init(&ed.subbuf);
+  strbuf_init(&ed.fnbuf);
 
   bufinit(&ed);
 
-  while (getline(&cmdbuf, '\n', ed.fin) > 0) {
-    cmd = strbuf_ptr(&cmdbuf);
-    i = 0;
-    cursave = ed.curln;
+  if (argc > 0 && *argv) {
+    const char *fn = *argv;
+    strbuf_addz(&ed.fnbuf, fn);
+    if (doread(&ed, 0) != ED_OK)
+      message("?");
+  }
+
+  while (getline(&cmdbuf, '\n', stdin) > 0) {
+    const char *cmd = strbuf_ptr(&cmdbuf);
+    int i = 0, cursave = ed.curln;
     if ((status = getlist(&ed, cmd, &i)) == ED_OK) {
       /* TODO ck & do global command */
       status = docmd(&ed, cmd, &i, false);
@@ -164,9 +158,8 @@ done:
   strbuf_free(&ed.linebuf);
   strbuf_free(&ed.patbuf);
   strbuf_free(&ed.subbuf);
+  strbuf_free(&ed.fnbuf);
   buffree(&ed);
-  if (ed.fin != stdin)
-    fclose(ed.fin);
   return r;
 }
 
@@ -356,6 +349,40 @@ gettrl(edstate *ped, const char *cmd, int *pi, bool *cflag)
   *pi = i+1;
   *cflag = cmd[*pi] == 'c'; /* complement */
   if (*cflag) *pi += 1;
+  return ED_OK;
+}
+
+static opstate /* scan optional filename argument */
+getfn(edstate *ped, const char *cmd, int *pi)
+{
+  int gotname = 0;
+  int gotblank = cmd[*pi] == ' ';
+  skipblank(cmd, pi);
+  if (cmd[*pi] == '\n' || cmd[*pi] == 0)
+    return strbuf_len(&ped->fnbuf) > 0 ? ED_OK : ED_ERR;
+  if (!gotblank) return ED_ERR; /* one blank required */
+  if (cmd[*pi] == '"') {
+    strbuf_trunc(&ped->linebuf, 0);
+    size_t n = scanstr(cmd + *pi, &ped->linebuf);
+    if (!n) return ED_ERR;
+    *pi += n;
+    gotname = 1;
+  }
+  else {
+    int i = *pi;
+    while (isgraph(cmd[i])) i += 1;
+    gotname = i > *pi;
+    strbuf_trunc(&ped->linebuf, 0);
+    strbuf_addb(&ped->linebuf, cmd + *pi, i - *pi);
+    *pi = i;
+  }
+  skipblank(cmd, pi);
+  if (cmd[*pi] != 0 && cmd[*pi] != NEWLINE)
+    return ED_ERR; /* invalid trailing stuff */
+  if (gotname) {
+    strbuf_trunc(&ped->fnbuf, 0);
+    strbuf_add(&ped->fnbuf, &ped->linebuf);
+  }
   return ED_OK;
 }
 
@@ -606,6 +633,28 @@ docmd(edstate *ped, const char *cmd, int *pi, bool glob)
           if ((status = defaultlines(ped, ped->curln, ped->curln)) == ED_OK)
             status = dotranslit(ped, cflag);
       break;
+    case FCMD:
+      if (ped->nlines == 0 && (status = getfn(ped, cmd, pi)) == ED_OK) {
+        printf("%s\n", strbuf_ptr(&ped->fnbuf));
+        status = ED_OK;
+      }
+      break;
+    case ECMD:
+      if (ped->nlines == 0 && (status = getfn(ped, cmd, pi)) == ED_OK) {
+        buffree(ped);
+        bufinit(ped);
+        status = doread(ped, 0);
+      }
+      break;
+    case RCMD:
+      if ((status = getfn(ped, cmd, pi)) == ED_OK)
+        status = doread(ped, ped->line2);
+      break;
+    case WCMD:
+      if ((status = getfn(ped, cmd, pi)) == ED_OK)
+        if ((status = defaultlines(ped, 1, ped->lastln)) == ED_OK)
+          status = dowrite(ped, ped->line1, ped->line2);
+      break;
     case EQCMD:
       if ((status = checkp(cmd, pi, &pflag)) == ED_OK)
         printf("%d\n", ped->line2); /* line2 defaults to curln */
@@ -669,7 +718,7 @@ doappend(edstate *ped, int n, bool glob)
   for (;;) {
     opstate status;
     const char *line;
-    if (getline(&ped->linebuf, '\n', ped->fin) < 0)
+    if (getline(&ped->linebuf, '\n', stdin) < 0)
       return ED_END;
     line = strbuf_ptr(&ped->linebuf);
     if (streq(line, ".\n"))
@@ -776,6 +825,51 @@ dotranslit(edstate *ped, bool allbut)
   }
 
   strbuf_free(&newbuf);
+  return status;
+}
+
+static opstate /* read file, insert after line n */
+doread(edstate *ped, int n)
+{
+  int numlines = 0;
+  opstate status = ED_OK;
+  const char *fn = strbuf_ptr(&ped->fnbuf);
+
+  FILE *fp = fopen(fn, "r");
+  if (!fp) return ED_ERR;
+
+  ped->curln = n;
+  while (getline(&ped->linebuf, '\n', fp) > 0) {
+    numlines += 1;
+    bufput(ped, strbuf_ptr(&ped->linebuf));
+  }
+
+  if (ferror(fp)) status = ED_ERR;
+  if (fclose(fp)) status = ED_ERR;
+  if (status == ED_OK)
+    printf("%d\n", numlines);
+  return status;
+}
+
+static opstate /* write lines n1..n2 to file */
+dowrite(edstate *ped, int n1, int n2)
+{
+  int n;
+  opstate status = ED_OK;
+  const char *fn = strbuf_ptr(&ped->fnbuf);
+
+  FILE *fp = fopen(fn, "w");
+  if (!fp) return ED_ERR;
+
+  for (n = n1; n <= n2; n++) {
+    const char *line = bufget(ped, n);
+    fputs(line, fp);
+  }
+
+  if (ferror(fp)) status = ED_ERR;
+  if (fclose(fp)) status = ED_ERR;
+  if (status == ED_OK)
+    printf("%d\n", n2 - n1 + 1);
   return status;
 }
 

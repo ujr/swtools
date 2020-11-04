@@ -41,6 +41,7 @@ const char *getprog(char **argv);
 size_t scanint(const char *s, int *v);
 size_t scanspace(const char *s);
 void skipblank(const char *s, int *pidx);
+size_t scanstr(const char *s, strbuf *sp);
 char escape(const char *s, int *pi);
 int dodash(const char *s, int i, char delim, strbuf *buf);
 FILE *openin(const char *filepath);

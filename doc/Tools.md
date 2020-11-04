@@ -609,6 +609,7 @@ Just a thought, not implemented.
   (for upper, lower, alnum, etc.)
 - find, change: word boundary zero-width pat elem
 - edit: prompt on q (ex 6-2) if input from tty
+- edit: W to append
 
 ## Book Chapters and Tools
 

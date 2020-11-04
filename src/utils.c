@@ -75,7 +75,6 @@ escape(const char *s, int *pi)
   if (c == 0) return ESC; /* not special at end */
   *pi += 1;
   switch (c) {
-    case '\\': return '\\';
     case 'a': return '\a';
     case 'b': return '\b';
     case 'e': return '\033';
@@ -87,6 +86,26 @@ escape(const char *s, int *pi)
     case '0': return '\0';
   }
   return c;
+}
+
+size_t /* scan a string, return #chars or -1 */
+scanstr(const char *s, strbuf *sp)
+{
+  char quote, c;
+  const char *p;
+  int i;
+  if (!s || !*s) return 0;
+  p = s;
+  quote = *s++;
+  while ((c = *s++)) {
+    if (iscntrl(c)) return 0; /* control char in string */
+    if (c == quote) return s - p;
+    i = -1;
+    c = escape(s, &i);
+    s += i;
+    strbuf_addc(sp, c);
+  }
+  return 0; /* unterminated string */
 }
 
 /* dodash: expand dashes and escapes in s[i..] until delim, return i of delim */
