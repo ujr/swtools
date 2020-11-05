@@ -598,6 +598,18 @@ state by replacing current lines `a,b` with “history” lines
 negative to mean that lines `a,b` are to be removed only).
 Just a thought, not implemented.
 
+The global command faces the difficulty that it must
+process all matching lines, regardless of how much
+the commands rearrange them. The approach taken here
+works in two passes: first, mark all matching lines;
+second, iterate over the line buffer repeatedly until
+no marked lines remain. This always terminates
+(**exercise 6-15**) because each marked line found
+is immediately unmarked and introduced lines, if any,
+are always unmarked. Therefore, in `doglob`, eventually
+only the `else` branch within the loop will be taken
+and `count` incremented beyond `lastln`.
+
 ## Possible Improvements
 
 - count: accept arguments that name files
@@ -608,8 +620,6 @@ Just a thought, not implemented.
 - find, change: predefined classes: %u %l %w etc.
   (for upper, lower, alnum, etc.)
 - find, change: word boundary zero-width pat elem
-- edit: prompt on q (ex 6-2) if input from tty
-- edit: W to append
 
 ## Book Chapters and Tools
 

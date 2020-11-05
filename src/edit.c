@@ -22,6 +22,7 @@ static void usage(const char *errmsg);
 #define DCMD     'd'    /* delete */
 #define ECMD     'e'    /* edit file */
 #define FCMD     'f'    /* filename */
+#define GCMD     'g'    /* global command */
 #define ICMD     'i'    /* insert (before current line) */
 #define JCMD     'j'    /* join lines */
 #define MCMD     'm'    /* move line(s) */
@@ -31,6 +32,7 @@ static void usage(const char *errmsg);
 #define SCMD     's'    /* substitute */
 #define TCMD     't'    /* transliterate */
 #define WCMD     'w'    /* write file */
+#define XCMD     'x'    /* complement of global command */
 #define EQCMD    '='    /* show line number */
 
 #define NEWLINE  '\n'
@@ -45,16 +47,16 @@ typedef struct {
 } bufitem;
 
 typedef struct {
-  int line1;  /* first line number */
-  int line2;  /* second line number */
-  int nlines; /* total # of line numbers specified */
-  int curln;  /* current line: value of dot */
-  int lastln; /* last line: value of $ */
-  strbuf patbuf; /* search pattern */
-  strbuf subbuf; /* substitute text */
-  strbuf linebuf; /* for line editing */
-  strbuf fnbuf; /* remembered filename */
-  bufitem *buffer;
+  int line1;   /* first line number */
+  int line2;   /* second line number */
+  int nlines;  /* # of line numbers specified (0,1,2) */
+  int curln;   /* num of current line (value of dot) */
+  int lastln;  /* num of last line (value of $) */
+  strbuf patbuf;   /* remembered search pattern */
+  strbuf subbuf;   /* substitution text (ephemeral) */
+  strbuf linebuf;  /* scratch buffer (ephemeral) */
+  strbuf fnbuf;    /* remembered filename */
+  bufitem *buffer; /* the line buffer (buf.h) */
 } edstate;
 
 /* status of operations: returned by most functions */
@@ -76,15 +78,16 @@ static int prevln(edstate *ped, int n);
 /* the line buffer interface */
 static void bufinit(edstate *ped); /* init buffer (only line zero, scratch file) */
 static void buffree(edstate *ped); /* release resources (memory, scratch file, whatever) */
-static bufitem makebuf(const char *z);
-static void reverse(bufitem *buf, int n1, int n2); /* helper for bufmove */
-static void bufmove(bufitem *buf, int n1, int n2, int n3); /* move lines n1..n2 after n3 */
 static const char *bufget(edstate *ped, int n); /* get line n for editing */
 static opstate bufput(edstate *ped, const char *line); /* add after curln */
+static void bufmove(edstate *ped, int n1, int n2, int n3); /* move lines n1..n2 after n3 */
+static bool getmark(edstate *ped, int n); /* get mark from line n */
+static void putmark(edstate *ped, int n, bool mark); /* set mark on line n */
+/* and related utilities */
+static void reverse(bufitem *buf, int n1, int n2); /* helper for bufmove */
+static bufitem makebuf(const char *z);
 static const char *copyline(const char *z); /* malloc'ed copy */
 static opstate updateln(edstate *ped, int n, const char *lines);
-//static char getmark(edstate *ped, int n);
-//static void putmark(edstate *ped, int n, char mark);
 
 /* doing the commands */
 static opstate docmd(edstate *ped, const char *cmd, int *pi, bool glob);
@@ -98,8 +101,10 @@ static opstate dosubst(edstate *ped, bool gflag, bool glob);
 static opstate dotranslit(edstate *ped, bool allbut);
 static opstate doread(edstate *ped, int n);
 static opstate dowrite(edstate *ped, int n1, int n2);
+static opstate ckglob(edstate *ped, const char *cmd, int *pi);
+static opstate doglob(edstate *ped, const char *cmd, int *pi, int *pcursave);
 
-static void message(const char *msg);
+static void message(const char *fmt, ...);
 
 int
 editcmd(int argc, char **argv)
@@ -140,15 +145,16 @@ editcmd(int argc, char **argv)
     const char *cmd = strbuf_ptr(&cmdbuf);
     int i = 0, cursave = ed.curln;
     if ((status = getlist(&ed, cmd, &i)) == ED_OK) {
-      /* TODO ck & do global command */
-      status = docmd(&ed, cmd, &i, false);
+      if ((status = ckglob(&ed, cmd, &i)) == ED_OK)
+        status = doglob(&ed, cmd, &i, &cursave);
+      else if (status != ED_ERR)
+        status = docmd(&ed, cmd, &i, false);
     }
+    if (status == ED_END) break;
     if (status == ED_ERR) {
       message("?");
       ed.curln = MIN(cursave, ed.lastln);
     }
-    else if (status == ED_END)
-      break;
   }
 
   r = SUCCESS;
@@ -408,14 +414,14 @@ prevln(edstate *ped, int n)
   return n <= 0 ? ped->lastln : n - 1;
 }
 
-static void /* init buffer (only line zero, scratch file) */
+static void /* initialize line buffer */
 bufinit(edstate *ped)
 {
   ped->buffer = 0;
   buf_push(ped->buffer, makebuf("\n")); /* line zero */
 }
 
-static void /* release resources (memory, scratch file, whatever) */
+static void /* release buffer resources */
 buffree(edstate *ped)
 {
   size_t i, n;
@@ -432,21 +438,10 @@ makebuf(const char *z)
   return item;
 }
 
-static void /* helper for bufmove */
-reverse(bufitem *buf, int n1, int n2)
-{
-  while (n1 < n2) {
-    bufitem temp = buf[n1];
-    buf[n1] = buf[n2];
-    buf[n2] = temp;
-    n1++;
-    n2--;
-  }
-}
-
 static void /* move lines n1..n2 after n3 */
-bufmove(bufitem *buf, int n1, int n2, int n3)
+bufmove(edstate *ped, int n1, int n2, int n3)
 {
+  bufitem *buf = ped->buffer;
   if (n3 < n1 - 1) {
     reverse(buf, n3+1, n1-1);
     reverse(buf, n1, n2);
@@ -479,10 +474,22 @@ bufput(edstate *ped, const char *line)
   m = (int) buf_size(ped->buffer);
   buf_push(ped->buffer, newitem);
   /* move into place, i.e., to after current line */
-  bufmove(ped->buffer, m, m, ped->curln);
+  bufmove(ped, m, m, ped->curln);
   ped->curln += 1;
   ped->lastln += 1;
   return ED_OK;
+}
+
+static bool /* get mark from line n */
+getmark(edstate *ped, int n)
+{
+  return ped->buffer[n].mark;
+}
+
+static void /* set mark on line n */
+putmark(edstate *ped, int n, bool mark)
+{
+  ped->buffer[n].mark = mark;
 }
 
 static const char *
@@ -495,6 +502,18 @@ copyline(const char *z)
   s = malloc(len+1);
   if (!s) return 0;
   return memcpy(s, z, len+1);
+}
+
+static void /* helper for bufmove */
+reverse(bufitem *buf, int n1, int n2)
+{
+  while (n1 < n2) {
+    bufitem temp = buf[n1];
+    buf[n1] = buf[n2];
+    buf[n2] = temp;
+    n1++;
+    n2--;
+  }
 }
 
 static opstate /* replace line n with replacement line(s) */
@@ -559,8 +578,8 @@ static opstate
 docmd(edstate *ped, const char *cmd, int *pi, bool glob)
 {
   opstate status = ED_ERR;
-  bool pflag = false;
-  bool gflag = false;
+  bool pflag = false; /* print flag for many commands */
+  bool gflag = false; /* global for substitute */
   bool cflag; /* complement for translit */
   int line3;
   char cc = cmd[*pi];
@@ -635,7 +654,7 @@ docmd(edstate *ped, const char *cmd, int *pi, bool glob)
       break;
     case FCMD:
       if (ped->nlines == 0 && (status = getfn(ped, cmd, pi)) == ED_OK) {
-        printf("%s\n", strbuf_ptr(&ped->fnbuf));
+        message("%s", strbuf_ptr(&ped->fnbuf));
         status = ED_OK;
       }
       break;
@@ -657,7 +676,7 @@ docmd(edstate *ped, const char *cmd, int *pi, bool glob)
       break;
     case EQCMD:
       if ((status = checkp(cmd, pi, &pflag)) == ED_OK)
-        printf("%d\n", ped->line2); /* line2 defaults to curln */
+        message("%d", ped->line2); /* line2 defaults to curln */
       break;
     case QCMD:
       if (nc == NEWLINE && ped->nlines == 0 && !glob)
@@ -735,7 +754,7 @@ dodelete(edstate *ped, int n1, int n2)
   if (n1 <= 0 || n1 > n2 || n2 > ped->lastln)
     return ED_ERR;
   /* move lines to end of buffer and "forget" them there */
-  bufmove(ped->buffer, n1, n2, ped->lastln);
+  bufmove(ped, n1, n2, ped->lastln);
   ped->lastln -= n2 - n1 + 1;
   ped->curln = prevln(ped, n1);
   debug("{del %d..%d: leave with lastln=%d curln=%d}\n",
@@ -748,7 +767,7 @@ domove(edstate *ped, int n3)
 {
   if (ped->line1 <= 0 || (ped->line1 <= n3 && n3 <= ped->line2))
     return ED_ERR;
-  bufmove(ped->buffer, ped->line1, ped->line2, n3);
+  bufmove(ped, ped->line1, ped->line2, n3);
   if (n3 > ped->line1) ped->curln = n3;
   else ped->curln = n3 + (ped->line2 - ped->line1 + 1);
   return ED_OK;
@@ -847,7 +866,7 @@ doread(edstate *ped, int n)
   if (ferror(fp)) status = ED_ERR;
   if (fclose(fp)) status = ED_ERR;
   if (status == ED_OK)
-    printf("%d\n", numlines);
+    message("%d", numlines);
   return status;
 }
 
@@ -869,14 +888,79 @@ dowrite(edstate *ped, int n1, int n2)
   if (ferror(fp)) status = ED_ERR;
   if (fclose(fp)) status = ED_ERR;
   if (status == ED_OK)
-    printf("%d\n", n2 - n1 + 1);
+    message("%d", n2 - n1 + 1);
+  return status;
+}
+
+static opstate /* check for global prefix, mark matching lines */
+ckglob(edstate *ped, const char *cmd, int *pi)
+{
+  int n, gflag;
+  const char *pat;
+  switch (cmd[*pi]) {
+    case GCMD: gflag = 1; break;
+    case XCMD: gflag = 0; break;
+    default: return ED_END;
+  }
+  *pi += 1;
+  if (optpat(ped, cmd, pi) != ED_OK)
+    return ED_ERR;
+  if (defaultlines(ped, 1, ped->lastln) != ED_OK)
+    return ED_ERR;
+  *pi += 1;
+  pat = strbuf_ptr(&ped->patbuf);
+  for (n = ped->line1; n <= ped->line2; n++) {
+    const char *line = bufget(ped, n);
+    int pos = match(line, pat, regex_none);
+    putmark(ped, n, gflag ? pos >= 0 : pos < 0);
+  }
+  /* erase leftover marks */
+  for (n = 1; n < ped->line1; n++)
+    putmark(ped, n, false);
+  for (n = ped->line2+1; n <= ped->lastln; n++)
+    putmark(ped, n, false);
+  return ED_OK;
+}
+
+static opstate /* do cmd[i..] on all marked lines */
+doglob(edstate *ped, const char *cmd, int *pi, int *pcursave)
+{
+  int count = 0;
+  int istart = *pi;
+  int n = ped->line1;
+  opstate status = ED_OK;
+
+  /* be sure to treat all marked lines, regardless of how
+     much the individual commands rearrange the lines; done
+     when no marked lines remain after last successful cmd */
+  while (count <= ped->lastln && status == ED_OK)
+  {
+    if (getmark(ped, n)) {
+      putmark(ped, n, false);
+      ped->curln = n;
+      *pcursave = n;
+      *pi = istart;
+      if ((status = getlist(ped, cmd, pi)) == ED_OK)
+        if ((status = docmd(ped, cmd, pi, true)) == ED_OK)
+          count = 0;
+    }
+    else {
+      n = nextln(ped, n);
+      count += 1;
+    }
+  }
+
   return status;
 }
 
 static void
-message(const char *msg)
+message(const char *fmt, ...)
 {
-  puts(msg); /* appends a newline */
+  va_list ap;
+  va_start(ap, fmt);
+  vfprintf(stdout, fmt, ap);
+  fprintf(stdout, "\n");
+  va_end(ap);
 }
 
 static void
