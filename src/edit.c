@@ -1,5 +1,6 @@
 
 #include <ctype.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -10,12 +11,6 @@
 #include "common.h"
 #include "regex.h"
 #include "strbuf.h"
-
-static void debug(const char *fmt, ...);
-static int parseopts(int argc, char **argv);
-static void usage(const char *errmsg);
-
-#define MIN(x,y) ((x)<(y)?(x):(y))
 
 #define ACMD     'a'    /* append (after current line) */
 #define CCMD     'c'    /* change (replace) line(s) */
@@ -28,10 +23,12 @@ static void usage(const char *errmsg);
 #define MCMD     'm'    /* move line(s) */
 #define PCMD     'p'    /* print */
 #define QCMD     'q'    /* quit */
+#define QQCMD    'Q'    /* quit unconditionally */
 #define RCMD     'r'    /* read file */
 #define SCMD     's'    /* substitute */
 #define TCMD     't'    /* transliterate */
 #define WCMD     'w'    /* write file */
+#define WWCMD    'W'    /* append to file */
 #define XCMD     'x'    /* complement of global command */
 #define EQCMD    '='    /* show line number */
 
@@ -39,7 +36,7 @@ static void usage(const char *errmsg);
 #define CURLINE  '.'
 #define LASTLINE '$'
 #define SCAN     '/'
-#define SCANBACK '\\'
+#define SCANBACK '?'
 
 typedef struct {
   const char *z;
@@ -57,7 +54,12 @@ typedef struct {
   strbuf linebuf;  /* scratch buffer (ephemeral) */
   strbuf fnbuf;    /* remembered filename */
   bufitem *buffer; /* the line buffer (buf.h) */
+  bool dirty;      /* set by edits, reset by full write */
+  bool wantquit;   /* set by first q if buffer dirty */
 } edstate;
+
+static void initialize(edstate *ped);
+static void terminate(edstate *ped);
 
 /* status of operations: returned by most functions */
 typedef enum { ED_OK, ED_ERR, ED_END } opstate;
@@ -100,23 +102,33 @@ static opstate dojoin(edstate *ped, int n1, int n2);
 static opstate dosubst(edstate *ped, bool gflag, bool glob);
 static opstate dotranslit(edstate *ped, bool allbut);
 static opstate doread(edstate *ped, int n);
-static opstate dowrite(edstate *ped, int n1, int n2);
+static opstate dowrite(edstate *ped, int n1, int n2, bool append);
 static opstate ckglob(edstate *ped, const char *cmd, int *pi);
 static opstate doglob(edstate *ped, const char *cmd, int *pi, int *pcursave);
 
-static void message(const char *fmt, ...);
+/* output routines and miscellaneous */
+static void message(const char *fmt, ...); /* appends newline */
+static void putline(const char *line);
+static void sigint(int signo);
+static opstate checkint(opstate status);
+static int parseopts(int argc, char **argv);
+static void usage(const char *errmsg);
+
+static volatile __sig_atomic_t intflag = 0;
 
 int
 editcmd(int argc, char **argv)
 {
-  int r;
-  strbuf cmdbuf = {0};
   edstate ed;
   opstate status;
+  strbuf cmdbuf = {0};
+  int r;
 
   r = parseopts(argc, argv);
   if (r < 0) return FAILHARD;
   SHIFTARGS(argc, argv, r);
+
+  initialize(&ed);
 
   if (argc > 1 && argv[0] && argv[1]) {
     usage("too many arguments");
@@ -124,13 +136,8 @@ editcmd(int argc, char **argv)
     goto done;
   }
 
-  ed.curln = ed.lastln = 0;
-  ed.line1 = ed.line2 = 0;
-  ed.nlines = 0;
-  strbuf_init(&ed.linebuf);
-  strbuf_init(&ed.patbuf);
-  strbuf_init(&ed.subbuf);
-  strbuf_init(&ed.fnbuf);
+  signal(SIGINT, &sigint);
+  signal(SIGTERM, SIG_IGN);
 
   bufinit(&ed);
 
@@ -141,6 +148,7 @@ editcmd(int argc, char **argv)
       message("?");
   }
 
+again:
   while (getline(&cmdbuf, '\n', stdin) > 0) {
     const char *cmd = strbuf_ptr(&cmdbuf);
     int i = 0, cursave = ed.curln;
@@ -157,16 +165,46 @@ editcmd(int argc, char **argv)
     }
   }
 
+  if (intflag) {
+    message("?");
+    message("{intflag}"); // TODO DEBUG DROP
+    intflag = 0;
+    clearerr(stdin);
+    clearerr(stdout);
+    goto again;
+  }
+
   r = SUCCESS;
 
 done:
   strbuf_free(&cmdbuf);
-  strbuf_free(&ed.linebuf);
-  strbuf_free(&ed.patbuf);
-  strbuf_free(&ed.subbuf);
-  strbuf_free(&ed.fnbuf);
   buffree(&ed);
+  terminate(&ed);
   return r;
+}
+
+static void
+initialize(edstate *ped)
+{
+  ped->curln = ped->lastln = 0;
+  ped->line1 = ped->line2 = 0;
+  ped->nlines = 0;
+  strbuf_init(&ped->linebuf);
+  strbuf_init(&ped->patbuf);
+  strbuf_init(&ped->subbuf);
+  strbuf_init(&ped->fnbuf);
+  ped->buffer = 0;
+  ped->dirty = false;
+  ped->wantquit = false;
+}
+
+static void
+terminate(edstate *ped)
+{
+  strbuf_free(&ped->linebuf);
+  strbuf_free(&ped->patbuf);
+  strbuf_free(&ped->subbuf);
+  strbuf_free(&ped->fnbuf);
 }
 
 static opstate /* get list of line numbers */
@@ -419,6 +457,8 @@ bufinit(edstate *ped)
 {
   ped->buffer = 0;
   buf_push(ped->buffer, makebuf("\n")); /* line zero */
+  ped->curln = ped->lastln = 0;
+  ped->dirty = false;
 }
 
 static void /* release buffer resources */
@@ -446,11 +486,13 @@ bufmove(edstate *ped, int n1, int n2, int n3)
     reverse(buf, n3+1, n1-1);
     reverse(buf, n1, n2);
     reverse(buf, n3+1, n2);
+    ped->dirty = true;
   }
   else if (n3 > n2) {
     reverse(buf, n1, n2);
     reverse(buf, n2+1, n3);
     reverse(buf, n1, n3);
+    ped->dirty = true;
   }
 }
 
@@ -477,6 +519,7 @@ bufput(edstate *ped, const char *line)
   bufmove(ped, m, m, ped->curln);
   ped->curln += 1;
   ped->lastln += 1;
+  ped->dirty = true;
   return ED_OK;
 }
 
@@ -540,7 +583,7 @@ updateln(edstate *ped, int n, const char *lines)
 }
 
 static void
-translit(const char *oldline, bool allbut, strbuf *src, strbuf *dst, strbuf *out)
+translit(const char *in, bool allbut, strbuf *src, strbuf *dst, strbuf *out)
 {
   const char *s = strbuf_ptr(src);
   size_t slen = strbuf_len(src);
@@ -554,16 +597,16 @@ translit(const char *oldline, bool allbut, strbuf *src, strbuf *dst, strbuf *out
   debug("{translit src=%s, dst=%s, cflag=%d}\n", s, d, allbut);
 
   if (drop) {
-    while ((c = *oldline++) && c != '\n') {
+    while ((c = *in++) && c != '\n') {
       int j = xindex(allbut, s, slen, c, lastdst);
       if (j < 0) strbuf_addc(out, c); /* copy; else drop */
     }
   }
-  else while ((c = *oldline++) && c != '\n') {
+  else while ((c = *in++) && c != '\n') {
     int j = xindex(allbut, s, slen, c, lastdst);
     if (squash && j >= lastdst) {
       strbuf_addc(out, d[lastdst]); /* translate first char*/
-      do j = xindex(allbut, s, slen, (c=*oldline++), lastdst);
+      do j = xindex(allbut, s, slen, (c=*in++), lastdst);
       while (c && c != '\n' && j >= lastdst); /* and drop remaining */
     }
     if (c && c != '\n') {
@@ -663,37 +706,49 @@ docmd(edstate *ped, const char *cmd, int *pi, bool glob)
         buffree(ped);
         bufinit(ped);
         status = doread(ped, 0);
+        ped->dirty = false;
       }
       break;
     case RCMD:
       if ((status = getfn(ped, cmd, pi)) == ED_OK)
         status = doread(ped, ped->line2);
       break;
-    case WCMD:
+    case WCMD: case WWCMD:
       if ((status = getfn(ped, cmd, pi)) == ED_OK)
         if ((status = defaultlines(ped, 1, ped->lastln)) == ED_OK)
-          status = dowrite(ped, ped->line1, ped->line2);
+          status = dowrite(ped, ped->line1, ped->line2, cc == WWCMD);
       break;
     case EQCMD:
       if ((status = checkp(cmd, pi, &pflag)) == ED_OK)
         message("%d", ped->line2); /* line2 defaults to curln */
       break;
-    case QCMD:
-      if (nc == NEWLINE && ped->nlines == 0 && !glob)
-        status = ED_END;
+    case QCMD: case QQCMD:
+      if (nc == NEWLINE && ped->nlines == 0 && !glob) {
+        if (!ped->dirty || ped->wantquit || cc == QQCMD)
+          status = ED_END;
+        else {
+          message("?");
+          ped->wantquit = true;
+          status = ED_OK;
+        }
+      }
       break;
 /* BEGIN DEBUG */
-    case '?':
-      debug("{nlines=%d, line1=%d, line2=%d, curln=%d, lastln=%d}\n",
-        ped->nlines, ped->line1, ped->line2, ped->curln, ped->lastln);
-      { size_t n = buf_size(ped->buffer); size_t i;
-      for (i = 0; i < n; i++)
-        debug("%02zd: %s", i, ped->buffer[i].z); }
+    case '*':
+      fprintf(stderr, "{nlines=%d, line1=%d, line2=%d, curln=%d, lastln=%d, dirty=%d, wantquit=%d}\n",
+        ped->nlines, ped->line1, ped->line2, ped->curln, ped->lastln, ped->dirty, ped->wantquit);
+      if (nc == '*') {
+        size_t i, n = buf_size(ped->buffer);
+        for (i = 0; i < n; i++)
+          fprintf(stderr, "%02zd: %s", i, ped->buffer[i].z);
+      }
       status = ED_OK;
       break;
 /* END DEBUG */
   }
 
+  if (cc != QCMD)
+    ped->wantquit = false;
   if (status == ED_OK && pflag)
     status = doprint(ped, ped->curln, ped->curln);
   return status;
@@ -717,35 +772,36 @@ checkp(const char *cmd, int *pi, bool *ppflag)
 static opstate /* print lines n1..n2 */
 doprint(edstate *ped, int n1, int n2)
 {
-  int i;
-  if (n1 <= 0) return ED_ERR;
-  for (i = n1; i <= n2; i++) {
-    const char *s = bufget(ped, i);
-    putstr(s);
+  int n;
+  opstate status = ED_OK;
+  if (n1 <= 0 || n1 > n2 || n2 > ped->lastln)
+    return ED_ERR;
+  for (n = n1; n <= n2; n++) {
+    const char *s = bufget(ped, n);
+    putline(s);
+    if ((status = checkint(status)) != ED_OK) break;
   }
   ped->curln = n2;
-  return ED_OK;
+  return status;
 }
 
 static opstate /* append input lines after line n */
 doappend(edstate *ped, int n, bool glob)
 {
-  if (glob)
-    return ED_ERR;
+  const char *line;
+  opstate status = ED_OK;
+  if (glob) return ED_ERR;
 
   ped->curln = n;
   for (;;) {
-    opstate status;
-    const char *line;
-    if (getline(&ped->linebuf, '\n', stdin) < 0)
+    if (getline(&ped->linebuf, '\n', stdin) <= 0)
       return ED_END;
     line = strbuf_ptr(&ped->linebuf);
-    if (streq(line, ".\n"))
-      return ED_OK;
+    if (streq(line, ".\n")) return ED_OK;
     status = bufput(ped, line);
-    if (status != ED_OK)
-      return ED_ERR;
+    if ((status = checkint(status)) != ED_OK) break;
   }
+  return status;
 }
 
 static opstate /* delete lines n1..n2 */
@@ -776,7 +832,8 @@ domove(edstate *ped, int n3)
 static opstate /* join lines n1..n2 */
 dojoin(edstate *ped, int n1, int n2)
 {
-  int n, status;
+  int n;
+  opstate status;
   if (n1 <= 0 || n1 > n2 || n2 > ped->lastln)
     return ED_ERR;
   if (n1 == n2) {
@@ -788,6 +845,7 @@ dojoin(edstate *ped, int n1, int n2)
   for (n = n1; n <= n2; n++) {
     strbuf_addz(&ped->linebuf, bufget(ped, n));
     strbuf_trunc(&ped->linebuf, strbuf_len(&ped->linebuf) - 1);
+    if ((status = checkint(status)) != ED_OK) return status;
   }
   strbuf_addc(&ped->linebuf, '\n');
   status = dodelete(ped, n1, n2);
@@ -820,6 +878,7 @@ dosubst(edstate *ped, bool gflag, bool glob)
       status = updateln(ped, n, newline);
       if (status != ED_OK) break;
     }
+    if ((status = checkint(status)) != ED_OK) break;
   }
 
   strbuf_free(&newbuf);
@@ -840,7 +899,7 @@ dotranslit(edstate *ped, bool allbut)
     strbuf_trunc(&newbuf, 0);
     translit(oldline, allbut, src, dst, &newbuf);
     status = updateln(ped, n, strbuf_ptr(&newbuf));
-    if (status != ED_OK) break;
+    if ((status = checkint(status)) != ED_OK) break;
   }
 
   strbuf_free(&newbuf);
@@ -861,6 +920,7 @@ doread(edstate *ped, int n)
   while (getline(&ped->linebuf, '\n', fp) > 0) {
     numlines += 1;
     bufput(ped, strbuf_ptr(&ped->linebuf));
+    if ((status = checkint(status)) != ED_OK) break;
   }
 
   if (ferror(fp)) status = ED_ERR;
@@ -871,24 +931,27 @@ doread(edstate *ped, int n)
 }
 
 static opstate /* write lines n1..n2 to file */
-dowrite(edstate *ped, int n1, int n2)
+dowrite(edstate *ped, int n1, int n2, bool append)
 {
   int n;
   opstate status = ED_OK;
   const char *fn = strbuf_ptr(&ped->fnbuf);
 
-  FILE *fp = fopen(fn, "w");
+  FILE *fp = fopen(fn, append ? "a" : "w");
   if (!fp) return ED_ERR;
 
   for (n = n1; n <= n2; n++) {
     const char *line = bufget(ped, n);
-    fputs(line, fp);
+    if (fputs(line, fp) < 0) break;
   }
 
   if (ferror(fp)) status = ED_ERR;
   if (fclose(fp)) status = ED_ERR;
-  if (status == ED_OK)
+  if (status == ED_OK) {
     message("%d", n2 - n1 + 1);
+    if (n1 == 1 && n2 == ped->lastln)
+      ped->dirty = false;
+  }
   return status;
 }
 
@@ -897,6 +960,7 @@ ckglob(edstate *ped, const char *cmd, int *pi)
 {
   int n, gflag;
   const char *pat;
+  opstate status;
   switch (cmd[*pi]) {
     case GCMD: gflag = 1; break;
     case XCMD: gflag = 0; break;
@@ -908,18 +972,20 @@ ckglob(edstate *ped, const char *cmd, int *pi)
   if (defaultlines(ped, 1, ped->lastln) != ED_OK)
     return ED_ERR;
   *pi += 1;
+  status = ED_OK;
   pat = strbuf_ptr(&ped->patbuf);
   for (n = ped->line1; n <= ped->line2; n++) {
     const char *line = bufget(ped, n);
     int pos = match(line, pat, regex_none);
     putmark(ped, n, gflag ? pos >= 0 : pos < 0);
+    if ((status = checkint(status)) != ED_OK) break;
   }
   /* erase leftover marks */
   for (n = 1; n < ped->line1; n++)
     putmark(ped, n, false);
   for (n = ped->line2+1; n <= ped->lastln; n++)
     putmark(ped, n, false);
-  return ED_OK;
+  return status;
 }
 
 static opstate /* do cmd[i..] on all marked lines */
@@ -948,6 +1014,7 @@ doglob(edstate *ped, const char *cmd, int *pi, int *pcursave)
       n = nextln(ped, n);
       count += 1;
     }
+    if ((status = checkint(status)) != ED_OK) break;
   }
 
   return status;
@@ -964,13 +1031,26 @@ message(const char *fmt, ...)
 }
 
 static void
-debug(const char *fmt, ...)
+putline(const char *line)
 {
-  va_list ap;
-  va_start(ap, fmt);
-  vfprintf(stderr, fmt, ap);
-  va_end(ap);
+  fputs(line, stdout);
 }
+
+static void
+sigint(int signo)
+{
+  UNUSED(signo);
+  intflag = 1;
+  debug("{SIGINT}\n");
+  signal(SIGINT, &sigint); /* re-establish handler */
+}
+
+static opstate /* map OK to END if interrupted */
+checkint(opstate status)
+{
+  return intflag && status == ED_OK ? ED_END : status;
+}
+
 
 static int
 parseopts(int argc, char **argv)

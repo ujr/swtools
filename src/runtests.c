@@ -13,6 +13,7 @@ extern void regex_test(int *pnumpass, int *pnumfail);
 extern void utils_test(int *pnumpass, int *pnumfail);
 
 const char *me = "runtests";
+int verbosity = 0; /* ref'd from utils.c */
 
 int
 main(int argc, char **argv)

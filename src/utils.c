@@ -251,3 +251,13 @@ checkioerr()
   return SUCCESS;
 }
 
+void
+debug(const char *fmt, ...)
+{
+  va_list ap;
+  if (verbosity < 1) return;
+  va_start(ap, fmt);
+  vfprintf(stderr, fmt, ap);
+  va_end(ap);
+}
+

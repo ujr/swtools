@@ -18,6 +18,9 @@
 #define SHIFTARGS(ac, av, n) do { (ac)-=n; (av)+=n; } while (0)
 #define UNUSED(x) (void)(x)  /* to suppress "unused parameter" warnings */
 
+#define MIN(x,y) ((x)<(y)?(x):(y))
+#define MAX(x,y) ((x)>(y)?(x):(y))
+
 #define ESC '\\'
 #define DASH '-'
 
@@ -51,6 +54,7 @@ int getline(strbuf *sp, int delim, FILE *fp);
 int getln(char **buf, size_t *len, FILE *fp);
 void printerr(const char *msg);
 int checkioerr();
+void debug(const char *fmt, ...);
 
 /* translit.c */
 

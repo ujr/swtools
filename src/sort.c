@@ -37,7 +37,6 @@ static bool numeric = false;
 
 #define MERGEORDER 5
 #define PATHBUFLEN 256
-#define MIN(x,y) ((x) < (y) ? (x) : (y))
 #define CHECKIOERR(fp, msg) if (ferror(fp)) { printerr(msg); return FAILSOFT; }
 #define CHECKTMPERR(fps, n, msg) do { for (int i=0;i<n;i++) \
   if (ferror(fps[i])) { printerr(msg); return FAILSOFT; }} while(0)
@@ -382,7 +381,7 @@ parseopts(int argc, char **argv, size_t *chunksize)
         case 'f': casefold = true; break;
         case 'n': numeric = true; break;
         case 'r': reverse = true; break;
-        case 'c': 
+        case 'c':
           if (argv[i+1] && (l = atol(argv[i+1])) > 0 && !*(p+1)) {
             *chunksize = l;
             i += 1;
