@@ -33,6 +33,8 @@ symlinks: bin/quux
 	ln -sf quux bin/echo
 	ln -sf quux bin/edit
 	ln -sf quux bin/find
+	ln -sf quux bin/include
+	ln -sf quux bin/print
 	ln -sf quux bin/shuffle
 	ln -sf quux bin/sort
 	ln -sf quux bin/translit

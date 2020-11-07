@@ -215,6 +215,19 @@ getln(char **buf, size_t *len, FILE *fp)
   return (c == EOF && n == 0) ? 0 : n;
 }
 
+/* strclone: same as strdup(3), which is not part of C89 */
+char *
+strclone(const char *s)
+{
+  size_t len;
+  char *t;
+  if (!s) return 0;
+  len = strlen(s);
+  t = malloc(len+1);
+  if (!t) return 0;
+  return memcpy(t, s, len+1);
+}
+
 /* printerr: print system error message to stderr
    Syntax: "[me][: msg][: errno]\n" */
 void

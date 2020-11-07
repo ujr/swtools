@@ -96,6 +96,14 @@ edit \fIfile\fP after discarding all previous text, remember file name
 \fBf\fP \fIfile\fP
 print file name, remember file name
 .TP
+\fBh\fP
+show help on last error
+.TP
+\fBH\fP
+toggle between help mode and normal mode; in help mode, the
+messages produced by the \fBh\fP command are automatically
+shown; the editor starts in normal mode
+.TP
 (.) \fBi\fP
 insert text before line (text follows)
 .TP
@@ -169,3 +177,12 @@ blanks or other unwieldy characters.
 
 .SH EXAMPLE
 Don't be silly.
+
+.SH BUGS
+Probably many and all mine, not those of the authors of the book.
+For testing and debugging, the commands \fB*\fP and \fB**\fP may
+be helpful: an optional line range is parsed as usual, but does
+not affect the commands; one \fB*\fP will print the values of all
+essential internal variables, and two \fB**\fP will also print
+the buffer, including lines past \fIlastln\fP, that is, the deleted
+stuff.

@@ -52,6 +52,7 @@ FILE *openout(const char *filepath);
 void filecopy(FILE *fin, FILE *fout);
 int getline(strbuf *sp, int delim, FILE *fp);
 int getln(char **buf, size_t *len, FILE *fp);
+char *strclone(const char *s);
 void printerr(const char *msg);
 int checkioerr();
 void debug(const char *fmt, ...);

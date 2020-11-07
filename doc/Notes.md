@@ -43,6 +43,32 @@ by your compiler. Some of the new C99 features are:
 [fam]: https://en.wikipedia.org/wiki/Flexible_array_member
 [offsetof]: https://en.wikipedia.org/wiki/Offsetof
 
+## Signals
+
+ANSI C defines only the signals in the list below; all other
+signals are defined by POSIX or other specifications.
+
+`SIGABRT` abnormal termination, raised by `abort()`  
+`SIGFPE` arithmetic exception  
+`SIGILL` illegal hardware instruction  
+`SIGINT` interactive attention, typically by Ctrl+C  
+`SIGSEGV` invalid memory reference  
+`SIGTERM` termination request, default signal for kill(1)
+
+Typical signal code looks like this:
+
+```C
+#include <signal.h>
+
+static volatile sig_atomic_t intflag = 0;
+
+static void sigint(int sig)
+{
+  signal(SIGINT, &sigint);  /* re-establish handler */
+  intflag = 1;  /* set flag for use by main program */
+}
+```
+
 ## Makefiles
 
 Do not use recursive Makefiles (breaks the dependency tree and results

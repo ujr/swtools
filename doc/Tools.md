@@ -42,6 +42,8 @@ the book (some have modern names, given here in parentheses):
 - “start testing as soon as possible” (_test driven development_)
   and “top-down testing is a natural extension of top-down
   design and top-down coding” [p.146]
+- if you build something, “make sure it has some conceptual
+  integrity” and “build it in increments” [p.263] (be _agile_)
 - “rewriting will always remain an important part of programming”
   [p.311] (*refactoring*, that is, reading and revising)
 
