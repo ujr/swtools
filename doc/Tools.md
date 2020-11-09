@@ -588,27 +588,31 @@ the line, prohibit removal of the trailing newline, and
 have a specific *join* command `j` to join lines.
 Approach (3) is implemented here.
 
-**Exercise 6-12** demands a `u` command to undo the last
-substitute or, more generally, any command. Since lines in
-the buffer are immutable and deleted or old versions of lines
-are kept at the invisible end of the buffer, *undo* would
-restore those lines into place (or delete inserted lines).
-The editor would keep track of a tuple `(a,b,c,d)` (or a
-stack of such tuples) and *undo* would restore the previous
-state by replacing current lines `a,b` with “history” lines
-`c,d` (where `c` and `d` are offsets from `lastln` or
-negative to mean that lines `a,b` are to be removed only).
-Just a thought, not implemented.
+**Exercise 6-12** asks for a `u` command to **undo** the last
+substitute or, more generally, any command. Lines in the buffer
+are immutable and old lines are kept at the invisible end of the
+buffer (lines beyond `lastln`). Therefore, *undo* can restore
+those lines into place.
+Indeed, the editor's only low-level operation is moving lines
+in the buffer. We keep track of those moves and *undo* will do
+the inverse moves. It will also need to restore former values
+of `curln` and `lastln`. By using a stack, we can provide any
+number of *undo* and *redo*. (Presently implemented that way,
+but global commands generate many undo steps, not just one.)
 
-The global command faces the difficulty that it must
-process all matching lines, regardless of how much
-the commands rearrange them. The approach taken here
-works in two passes: first, mark all matching lines;
-second, iterate over the line buffer repeatedly until
-no marked lines remain. This always terminates
-(**exercise 6-15**) because each marked line found
-is immediately unmarked and introduced lines, if any,
-are always unmarked. Therefore, in `doglob`, eventually
+Is unlimited undo/redo really useful in an editor like ours?
+Other than with screen editors, it is not easy for the user
+to see the effect of an undo. Therefore, having just one level
+of undo might be all that is needed.
+
+The **global command** faces the difficulty that it must
+process all matching lines, regardless of how much they are
+rearranged. The approach taken here works in two passes:
+first, mark all matching lines; second, iterate over the
+line buffer repeatedly until no marked lines remain. This
+always terminates (**exercise 6-15**) because each marked
+line found is immediately unmarked and introduced lines, if
+any, are never marked. Therefore, in `doglob`, eventually
 only the `else` branch within the loop will be taken
 and `count` incremented beyond `lastln`.
 

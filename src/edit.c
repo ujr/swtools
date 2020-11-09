@@ -30,6 +30,8 @@
 #define RCMD     'r'    /* read file */
 #define SCMD     's'    /* substitute */
 #define TCMD     't'    /* transliterate */
+#define UCMD     'u'    /* undo */
+#define UUCMD    'U'    /* redo */
 #define WCMD     'w'    /* write file */
 #define WWCMD    'W'    /* append to file */
 #define XCMD     'x'    /* complement of global command */
@@ -42,10 +44,21 @@
 #define SCAN     '/'
 #define SCANBACK '?'
 
+#define UNDOMOVE 'M'
+#define UNDOEND  '$'
+
 typedef struct {
   const char *z;
   bool mark;
 } bufitem;
+
+typedef struct {
+  char cmd;        /* the undone command or 'M' */
+  union {
+    struct { int n1, n2, n3; } m;  /* if cmd is 'M' */
+    struct { int curln, lastln; } l;   /* otherwise */
+  } u;
+} undoitem;
 
 typedef struct {
   int line1;       /* first line number */
@@ -60,6 +73,8 @@ typedef struct {
   bufitem *buffer; /* the line buffer (buf.h) */
   bool dirty;      /* set by edits, reset by full write */
   bool wantquit;   /* set by first q if buffer dirty */
+  undoitem *ustk;  /* undo stack (buf.h) */
+  size_t uptr;     /* pointer into undo stack */
   bool helpmode;   /* if true, automatically show errhelp */
   const char *errhelp;  /* explanation of most recent ? */
 } edstate;
@@ -91,10 +106,16 @@ static opstate bufput(edstate *ped, const char *line); /* add after curln */
 static void bufmove(edstate *ped, int n1, int n2, int n3); /* n1,n2 past n3 */
 static bool getmark(edstate *ped, int n); /* get mark from line n */
 static void putmark(edstate *ped, int n, bool mark); /* set mark on line n */
-/* and related utilities */
-static void reverse(bufitem *buf, int n1, int n2); /* helper for bufmove */
+/* and lower-level utilities */
+static void reverse(bufitem buf[], int n1, int n2);
+static bool move(bufitem buf[], int n1, int n2, int n3);
+static bool unmove(bufitem buf[], int n1, int n2, int n3);
 static bufitem makebuf(const char *z);
+static opstate append(edstate *ped, int n);
+static opstate delete(edstate *ped, int n1, int n2);
+static opstate joinlines(edstate *ped, int n1, int n2);
 static opstate updateln(edstate *ped, int n, const char *lines);
+static void translit(const char *in, bool allbut, strbuf *src, strbuf *dst, strbuf *out);
 
 /* doing the commands */
 static opstate docmd(edstate *ped, const char *cmd, int *pi, bool glob);
@@ -104,6 +125,7 @@ static opstate checkp(edstate *ped, const char *cmd, int *pi, bool *ppflag);
 static opstate doprint(edstate *ped, int n1, int n2);
 static opstate doappend(edstate *ped, int n, bool glob);
 static opstate dodelete(edstate *ped, int n1, int n2);
+static opstate dochange(edstate *ped, int n1, int n2, bool glob);
 static opstate domove(edstate *ped, int n3);
 static opstate dojoin(edstate *ped, int n1, int n2);
 static opstate dosubst(edstate *ped, bool gflag, bool glob);
@@ -112,6 +134,16 @@ static opstate doread(edstate *ped, int n);
 static opstate dowrite(edstate *ped, int n1, int n2, bool append);
 static opstate ckglob(edstate *ped, const char *cmd, int *pi);
 static opstate doglob(edstate *ped, const char *cmd, int *pi, int *pcursave);
+static opstate dodebug(edstate *ped, char subcmd);
+
+/* undo/redo */
+static void pushcmd(edstate *ped, char cmd);
+static void pushmove(edstate *ped, int n1, int n2, int n3);
+static void pushend(edstate *ped);
+static void pushundo(edstate *ped, undoitem item);
+static undoitem popundo(edstate *ped);
+static opstate doundo(edstate *ped);
+static opstate doredo(edstate *ped);
 
 /* output routines and miscellaneous */
 static void message(const char *fmt, ...); /* appends newline */
@@ -206,6 +238,8 @@ initialize(edstate *ped)
   ped->buffer = 0;
   ped->dirty = false;
   ped->wantquit = false;
+  ped->ustk = 0;
+  ped->uptr = 0;
   ped->helpmode = false;
   ped->errhelp = 0;
 }
@@ -217,6 +251,8 @@ terminate(edstate *ped)
   strbuf_free(&ped->patbuf);
   strbuf_free(&ped->subbuf);
   strbuf_free(&ped->fnbuf);
+  buf_free(ped->ustk);
+  ped->ustk = 0;
 }
 
 static opstate /* get list of line numbers */
@@ -499,18 +535,9 @@ buffree(edstate *ped)
 static void /* move lines n1..n2 after n3 */
 bufmove(edstate *ped, int n1, int n2, int n3)
 {
-  bufitem *buf = ped->buffer;
-  if (n3 < n1 - 1) {
-    reverse(buf, n3+1, n1-1);
-    reverse(buf, n1, n2);
-    reverse(buf, n3+1, n2);
+  if (move(ped->buffer, n1, n2, n3)) {
     ped->dirty = true;
-  }
-  else if (n3 > n2) {
-    reverse(buf, n1, n2);
-    reverse(buf, n2+1, n3);
-    reverse(buf, n1, n3);
-    ped->dirty = true;
+    pushmove(ped, n1, n2, n3);
   }
 }
 
@@ -560,8 +587,8 @@ makebuf(const char *z)
   return item;
 }
 
-static void /* helper for bufmove */
-reverse(bufitem *buf, int n1, int n2)
+static void /* reverse lines n1..n2 in buffer */
+reverse(bufitem buf[], int n1, int n2)
 {
   while (n1 < n2) {
     bufitem temp = buf[n1];
@@ -570,6 +597,86 @@ reverse(bufitem *buf, int n1, int n2)
     n1++;
     n2--;
   }
+}
+
+static bool /* move n1..n2 to after n3 */
+move(bufitem buf[], int n1, int n2, int n3)
+{
+  if (n3 < n1 - 1) {
+    reverse(buf, n3+1, n1-1);
+    reverse(buf, n1, n2);
+    reverse(buf, n3+1, n2);
+    return true;
+  }
+  if (n3 > n2) {
+    reverse(buf, n1, n2);
+    reverse(buf, n2+1, n3);
+    reverse(buf, n1, n3);
+    return true;
+  }
+  return false; /* no move: target in n1..n2 */
+}
+
+static bool /* the inverse of move(n1,n2,n3) */
+unmove(bufitem buf[], int n1, int n2, int n3)
+{
+  if (n3 < n1 - 1) {
+    reverse(buf, n3+1, n2);
+    reverse(buf, n1, n2);
+    reverse(buf, n3+1, n1-1);
+    return true;
+  }
+  if (n3 > n2) {
+    reverse(buf, n1, n3);
+    reverse(buf, n2+1, n3);
+    reverse(buf, n1, n2);
+    return true;
+  }
+  return false;
+}
+
+static opstate /* read and append lines after line n */
+append(edstate *ped, int n)
+{
+  const char *line;
+  opstate status = ED_OK;
+  ped->curln = n;
+  for (;;) {
+    if (getline(&ped->linebuf, NEWLINE, stdin) <= 0)
+      return ED_END;
+    line = strbuf_ptr(&ped->linebuf);
+    if (streq(line, ".\n")) return ED_OK;
+    status = bufput(ped, line);
+    if (status != ED_OK) break;
+    if ((status = checkint(status)) != ED_OK) break;
+  }
+  return status;
+}
+
+static opstate /* delete lines n1..n2 */
+delete(edstate *ped, int n1, int n2)
+{
+  /* move lines to end of buffer and "forget" them there */
+  bufmove(ped, n1, n2, ped->lastln);
+  ped->lastln -= n2 - n1 + 1;
+  ped->curln = prevln(ped, n1);
+  return ED_OK;
+}
+
+static opstate /* join lines n1..n2 into linebuf */
+joinlines(edstate *ped, int n1, int n2)
+{
+  int n;
+  opstate status = ED_OK;
+  strbuf_trunc(&ped->linebuf, 0);
+  for (n = n1; n <= n2; n++) {
+    /* append lines n1..n2 but not the trailing newlines */
+    strbuf_addz(&ped->linebuf, bufget(ped, n));
+    strbuf_trunc(&ped->linebuf, strbuf_len(&ped->linebuf) - 1);
+    if ((status = checkint(status)) != ED_OK) return status;
+  }
+  strbuf_addc(&ped->linebuf, NEWLINE);
+  return status;
 }
 
 static opstate /* replace line n with line(s), update curln, lastln, line2 */
@@ -583,7 +690,7 @@ updateln(edstate *ped, int n, const char *lines)
     return error(ped, "must not remove trailing newline");
   if (streq(lines, bufget(ped, n)))
     return ED_OK; /* line did not change */
-  status = dodelete(ped, n, n);
+  status = delete(ped, n, n);
   /* interior newlines will split the line */
   while (status == ED_OK && (p = strchr(lines, NEWLINE))) {
     char saved = p[1];
@@ -608,8 +715,6 @@ translit(const char *in, bool allbut, strbuf *src, strbuf *dst, strbuf *out)
   bool squash = slen > dlen || allbut; /* src longer: squash runs */
   int lastdst = dlen - 1; /* if squashing: use this char */
   char c;
-
-  debug("{translit src=%s, dst=%s, cflag=%d}\n", s, d, allbut);
 
   if (drop) {
     while ((c = *in++)) {
@@ -641,7 +746,6 @@ docmd(edstate *ped, const char *cmd, int *pi, bool glob)
   char cc = cmd[*pi];  /* current cmd character */
   char nc = 0;         /* next cmd char, 0 if none */
   int line3;
-  size_t sz;
 
   if (cc) {
     *pi += 1;
@@ -672,8 +776,7 @@ docmd(edstate *ped, const char *cmd, int *pi, bool glob)
     case CCMD: /* change */
       if ((status = cknoargs(ped, nc)) == ED_OK)
         if ((status = defaultlines(ped, ped->curln, ped->curln)) == ED_OK)
-          if ((status = dodelete(ped, ped->line1, ped->line2)) == ED_OK)
-            status = doappend(ped, prevln(ped, ped->line1), glob);
+          status = dochange(ped, ped->line1, ped->line2, glob);
       break;
     case DCMD: /* delete */
       if ((status = checkp(ped, cmd, pi, &pflag)) == ED_OK)
@@ -685,8 +788,9 @@ docmd(edstate *ped, const char *cmd, int *pi, bool glob)
       break;
     case MCMD: /* move */
       status = getone(ped, cmd, pi, &line3);
-      if (status == ED_END) status = ED_ERR;
-      if (status == ED_OK)
+      if (status == ED_END)
+        status = error(ped, "expect line address argument");
+      else if (status == ED_OK)
         if ((status = checkp(ped, cmd, pi, &pflag)) == ED_OK)
           if ((status = defaultlines(ped, ped->curln, ped->curln)) == ED_OK)
             status = domove(ped, line3);
@@ -758,17 +862,18 @@ docmd(edstate *ped, const char *cmd, int *pi, bool glob)
         }
       }
       break;
+    case UCMD: /* undo */
+      if ((status = cknoargs(ped, nc)) == ED_OK)
+        if ((status = cknolines(ped)) == ED_OK)
+          status = doundo(ped);
+      break;
+    case UUCMD: /* redo */
+      if ((status = cknoargs(ped, nc)) == ED_OK)
+        if ((status = cknolines(ped)) == ED_OK)
+          status = doredo(ped);
+      break;
     case DBGCMD: /* debug info */
-      sz = buf_size(ped->buffer);
-      fprintf(stderr, "{nlines=%d, line1=%d, line2=%d, wantquit=%d;\n",
-        ped->nlines, ped->line1, ped->line2, ped->wantquit);
-      fprintf(stderr, " curln=%d, lastln=%d, bufsize=%zd, dirty=%d}\n",
-        ped->curln, ped->lastln, sz, ped->dirty);
-      if (nc == DBGCMD) { size_t i;
-        for (i = 0; i < sz && !intflag; i++)
-          fprintf(stderr, "%02zd: %s", i, ped->buffer[i].z);
-      }
-      status = ED_OK;
+      status = dodebug(ped, nc);
       break;
     default:
       status = error(ped, "unknown command");
@@ -831,35 +936,39 @@ doprint(edstate *ped, int n1, int n2)
 static opstate /* append input lines after line n */
 doappend(edstate *ped, int n, bool glob)
 {
-  const char *line;
-  opstate status = ED_OK;
+  opstate status;
   if (glob)
     return error(ped, "not implemented with global command");
-
-  ped->curln = n;
-  for (;;) {
-    if (getline(&ped->linebuf, NEWLINE, stdin) <= 0)
-      return ED_END;
-    line = strbuf_ptr(&ped->linebuf);
-    if (streq(line, ".\n")) return ED_OK;
-    status = bufput(ped, line);
-    if ((status = checkint(status)) != ED_OK) break;
-  }
+  pushcmd(ped, 'a');
+  status = append(ped, n);
+  pushend(ped);
   return status;
 }
 
 static opstate /* delete lines n1..n2 */
 dodelete(edstate *ped, int n1, int n2)
 {
-  if (n1 <= 0 || n1 > n2 || n2 > ped->lastln)
+  opstate status;
+  int last = ped->lastln;
+  if (n1 <= 0 || n1 > n2 || n2 > last)
     return error(ped, "line numbers out of range");
-  /* move lines to end of buffer and "forget" them there */
-  bufmove(ped, n1, n2, ped->lastln);
-  ped->lastln -= n2 - n1 + 1;
-  ped->curln = prevln(ped, n1);
-  debug("{del %d..%d: leave with lastln=%d curln=%d}\n",
-    n1, n2, ped->lastln, ped->curln);
-  return ED_OK;
+  pushcmd(ped, 'd');
+  status = delete(ped, n1, n2);
+  pushend(ped);
+  return status;
+}
+
+static opstate /* replace lines n1..n2 by user input */
+dochange(edstate *ped, int n1, int n2, bool glob)
+{
+  opstate status;
+  if (glob)
+    return error(ped, "not implemented with global command");
+  pushcmd(ped, 'c');
+  if ((status = delete(ped, n1, n2)) == ED_OK)
+    status = append(ped, prevln(ped, n1));
+  pushend(ped);
+  return status;
 }
 
 static opstate /* move line1..line2 to after line n3 */
@@ -872,43 +981,35 @@ domove(edstate *ped, int n3)
     return error(ped, "line numbers out of range");
   if (n1 <= n3 && n3 <= n2)
     return error(ped, "target address in source range");
+  pushcmd(ped, 'm');
   bufmove(ped, n1, n2, n3);
   if (n3 > n1) ped->curln = n3;
   else ped->curln = n3 + k;
+  pushend(ped);
   return ED_OK;
 }
 
 static opstate /* join lines n1..n2 */
 dojoin(edstate *ped, int n1, int n2)
 {
-  int n;
   opstate status;
   if (n1 <= 0 || n1 > n2 || n2 > ped->lastln)
     return error(ped, "line numbers out of range");
-  if (n1 == n2) {
-    /* nothing to join, but set curln so xjp prints line x */
-    ped->curln = n1;
-    return ED_OK;
-  }
-  status = ED_OK;
-  strbuf_trunc(&ped->linebuf, 0);
-  for (n = n1; n <= n2; n++) {
-    /* append lines n1..n2 but not the trailing newlines */
-    strbuf_addz(&ped->linebuf, bufget(ped, n));
-    strbuf_trunc(&ped->linebuf, strbuf_len(&ped->linebuf) - 1);
-    if ((status = checkint(status)) != ED_OK) return status;
-  }
-  strbuf_addc(&ped->linebuf, NEWLINE);
-  status = dodelete(ped, n1, n2);
+  if (n1 == n2)
+    return error(ped, "cannot join one line");
+  status = joinlines(ped, n1, n2);
   if (status != ED_OK) return status;
-  return bufput(ped, strbuf_ptr(&ped->linebuf));
+  pushcmd(ped, 'j');
+  if ((status = delete(ped, n1, n2)) == ED_OK)
+    status = bufput(ped, strbuf_ptr(&ped->linebuf));
+  pushend(ped);
+  return status;
 }
 
 static opstate /* substitute on line1..line2 */
 dosubst(edstate *ped, bool gflag, bool glob)
 {
   opstate status;
-  strbuf newbuf = {0};
   int flags = regex_none;
   int n, subs, tally = 0;
   const char *pat = strbuf_ptr(&ped->patbuf);
@@ -920,12 +1021,14 @@ dosubst(edstate *ped, bool gflag, bool glob)
 
   status = ED_OK;
 
+  pushcmd(ped, 's');
+
   for (n = ped->line1; n <= ped->line2; n++) {
     const char *oldline = bufget(ped, n);
-    strbuf_trunc(&newbuf, 0);
-    subs = subline(oldline, pat, flags, sub, &newbuf);
+    strbuf_trunc(&ped->linebuf, 0);
+    subs = subline(oldline, pat, flags, sub, &ped->linebuf);
     if (subs > 0) {
-      const char *newline = strbuf_ptr(&newbuf);
+      const char *newline = strbuf_ptr(&ped->linebuf);
       status = updateln(ped, n, newline);
       if (status != ED_OK) break;
       n = ped->curln; /* adjust in case line was split */
@@ -934,10 +1037,12 @@ dosubst(edstate *ped, bool gflag, bool glob)
     if ((status = checkint(status)) != ED_OK) break;
   }
 
-  if (status == ED_OK && tally == 0 && !glob)
+  if (status == ED_OK && tally == 0 && !glob) {
+    popundo(ped);
     status = error(ped, "no substitutions made");
+  }
+  else pushend(ped);
 
-  strbuf_free(&newbuf);
   return status;
 }
 
@@ -950,6 +1055,7 @@ dotranslit(edstate *ped, bool allbut)
   strbuf newbuf = {0};
   opstate status = ED_OK;
 
+  pushcmd(ped, 't');
   for (n = ped->line1; n <= ped->line2; n++) {
     const char *oldline = bufget(ped, n);
     strbuf_trunc(&newbuf, 0);
@@ -958,7 +1064,7 @@ dotranslit(edstate *ped, bool allbut)
     if ((status = checkint(status)) != ED_OK) break;
     n = ped->curln; /* adjust in case line was split */
   }
-
+  pushend(ped);
   strbuf_free(&newbuf);
   return status;
 }
@@ -973,12 +1079,16 @@ doread(edstate *ped, int n)
   FILE *fp = fopen(fn, "r");
   if (!fp) return error(ped, "cannot open file");
 
+  pushcmd(ped, 'r');
+
   ped->curln = n;
   while (getline(&ped->linebuf, NEWLINE, fp) > 0) {
     numlines += 1;
     bufput(ped, strbuf_ptr(&ped->linebuf));
     if ((status = checkint(status)) != ED_OK) break;
   }
+
+  pushend(ped);
 
   if (ferror(fp)) status = error(ped, "I/O error");
   if (fclose(fp)) status = error(ped, "I/O error");
@@ -1007,7 +1117,7 @@ dowrite(edstate *ped, int n1, int n2, bool append)
   if (status == ED_OK) {
     message("%d", n2 - n1 + 1);
     if (n1 == 1 && n2 == ped->lastln)
-      ped->dirty = false;
+      ped->dirty = false; /* all saved */
   }
   return status;
 }
@@ -1077,6 +1187,133 @@ doglob(edstate *ped, const char *cmd, int *pi, int *pcursave)
   return status;
 }
 
+static opstate
+dodebug(edstate *ped, char subcmd)
+{
+  size_t i;
+  size_t bufsize = buf_size(ped->buffer);
+  if (subcmd == DBGCMD) {
+    for (i = 0; i < bufsize && !intflag; i++)
+      fprintf(stderr, "%02zd: %s", i, ped->buffer[i].z);
+  }
+  else if (subcmd == UCMD) {
+    fprintf(stderr, "Undo stack:");
+    for (i = 0; i < buf_size(ped->ustk); i++) {
+      undoitem *pitem = &ped->ustk[i];
+      if (pitem->cmd == UNDOEND)
+        fprintf(stderr, " (end cur=%d last=%d)", pitem->u.l.curln, pitem->u.l.lastln);
+      else if (pitem->cmd == UNDOMOVE)
+        fprintf(stderr, " (move %d %d %d)", pitem->u.m.n1, pitem->u.m.n2, pitem->u.m.n3);
+      else
+        fprintf(stderr, " (cmd %c cur=%d last=%d)", pitem->cmd, pitem->u.l.curln, pitem->u.l.lastln);
+    }
+    fprintf(stderr, "\n");
+  }
+  fprintf(stderr, "{command: nlines=%d line1=%d line2=%d wantquit=%d}\n",
+    ped->nlines, ped->line1, ped->line2, ped->wantquit);
+  fprintf(stderr, "{buffer: curln=%d lastln=%d bufsize=%zd dirty=%d}\n",
+    ped->curln, ped->lastln, bufsize, ped->dirty);
+  fprintf(stderr, "{ustack: ptr=%zd size=%zd (NB: u is --ptr, U is ptr++)}\n",
+    ped->uptr, buf_size(ped->ustk));
+  return ED_OK;
+}
+
+static void
+pushundo(edstate *ped, undoitem item)
+{
+  size_t n;
+  /* drop excess undo items (can redo only after undo) */
+  for (n=buf_size(ped->ustk); n > ped->uptr; n=buf_size(ped->ustk))
+    (void) buf_pop(ped->ustk);
+  buf_push(ped->ustk, item);
+  ped->uptr++;
+}
+
+static void
+pushcmd(edstate *ped, char cmd)
+{
+  undoitem item;
+  item.cmd = cmd;
+  item.u.l.curln = ped->curln;
+  item.u.l.lastln = ped->lastln;
+  pushundo(ped, item);
+}
+
+static void
+pushmove(edstate *ped, int n1, int n2, int n3)
+{
+  undoitem item;
+  item.cmd = UNDOMOVE;
+  item.u.m.n1 = n1;
+  item.u.m.n2 = n2;
+  item.u.m.n3 = n3;
+  pushundo(ped, item);
+}
+
+static void
+pushend(edstate *ped)
+{
+  undoitem item;
+  item.cmd = UNDOEND;
+  item.u.l.curln = ped->curln;
+  item.u.l.lastln = ped->lastln;
+  pushundo(ped, item);
+}
+
+static undoitem
+popundo(edstate *ped)
+{
+  static undoitem dummy = {'?',{{0,0,0}}};
+  return ped->uptr > 0 ? ped->ustk[--ped->uptr] : dummy;
+}
+
+static opstate /* try to undo the last command */
+doundo(edstate *ped)
+{
+  if (ped->uptr == 0)
+    return error(ped, "undo stack empty");
+
+  /* undo stack: ... cmd { move } [ end ] ^ ... */
+
+  while (ped->uptr > 0) {
+    undoitem item = ped->ustk[--ped->uptr];
+    if (item.cmd == UNDOEND) continue;
+    if (item.cmd == UNDOMOVE) {
+      unmove(ped->buffer, item.u.m.n1, item.u.m.n2, item.u.m.n3);
+    }
+    else {
+      ped->curln = item.u.l.curln;
+      ped->lastln = item.u.l.lastln;
+      break;
+    }
+  }
+  return ED_OK;
+}
+
+static opstate /* redo last undone command */
+doredo(edstate *ped)
+{
+  size_t n = buf_size(ped->ustk);
+  if (ped->uptr >= n)
+    return error(ped, "no undone actions to redo");
+
+  /* undo stack: ... ^ cmd { move } [ end ] ... */
+
+  while (ped->uptr < n) {
+    undoitem item = ped->ustk[ped->uptr++];
+    if (item.cmd == UNDOEND) {
+      ped->curln = item.u.l.curln;
+      ped->lastln = item.u.l.lastln;
+      break;
+    }
+    if (item.cmd == UNDOMOVE) {
+      move(ped->buffer, item.u.m.n1, item.u.m.n2, item.u.m.n3);
+    }
+    else continue;
+  }
+  return ED_OK;
+}
+
 static void
 message(const char *fmt, ...)
 {
@@ -1108,13 +1345,12 @@ checkint(opstate status)
   return intflag && status == ED_OK ? ED_END : status;
 }
 
-static opstate
+static opstate /* set message and return ERR */
 error(edstate *ped, const char *msg)
 {
   ped->errhelp = msg;
   return ED_ERR;
 }
-
 
 static int
 parseopts(int argc, char **argv)

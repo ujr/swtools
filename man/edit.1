@@ -180,6 +180,10 @@ Don't be silly.
 
 .SH BUGS
 Probably many and all mine, not those of the authors of the book.
+
+There is no undo/redo for the global commands; to guard against
+inconsistencies, a global command discards the entire undo stack.
+
 For testing and debugging, the commands \fB*\fP and \fB**\fP may
 be helpful: an optional line range is parsed as usual, but does
 not affect the commands; one \fB*\fP will print the values of all
