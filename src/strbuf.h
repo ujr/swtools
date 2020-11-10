@@ -23,8 +23,11 @@ typedef struct strbuf {
    results in a memory leak).
 
    The buffer size is always even, its least significant bit
-   thus always zero and terefore redundant; we use it as the
-   failed flag (0=normal, 1=failed). */
+   thus always zero and therefore redundant; we use it as the
+   failed flag (0=normal, 1=failed).
+
+   The functions with return type int return true if sucessful
+   and 0 on error. */
 
 #define strbuf_ptr(sp)     ((sp)->buf ? (sp)->buf : "")
 #define strbuf_char(sp, i) ((sp)->buf[i])

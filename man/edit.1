@@ -181,8 +181,8 @@ Don't be silly.
 .SH BUGS
 Probably many and all mine, not those of the authors of the book.
 
-There is no undo/redo for the global commands; to guard against
-inconsistencies, a global command discards the entire undo stack.
+For global commands, undo/redo is not an atomic operation, but
+one for each non-global command invoked.
 
 For testing and debugging, the commands \fB*\fP and \fB**\fP may
 be helpful: an optional line range is parsed as usual, but does

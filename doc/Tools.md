@@ -626,6 +626,8 @@ and `count` incremented beyond `lastln`.
 - find, change: predefined classes: %u %l %w etc.
   (for upper, lower, alnum, etc.)
 - find, change: word boundary zero-width pat elem
+- edit: limit size of undo stack
+- edit: check consistently for out-of-memory (strbuf)
 
 ## Book Chapters and Tools
 

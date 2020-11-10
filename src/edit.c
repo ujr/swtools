@@ -1,6 +1,7 @@
 /* edit */
 
 #include <ctype.h>
+#include <setjmp.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -8,7 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void nomem(void);
+#define BUF_ABORT nomem()
 #include "buf.h"
+
 #include "common.h"
 #include "regex.h"
 #include "strbuf.h"
@@ -1350,6 +1354,12 @@ error(edstate *ped, const char *msg)
 {
   ped->errhelp = msg;
   return ED_ERR;
+}
+
+static void nomem(void)
+{
+  printerr("out of memory");
+  longjmp(errjmp, 1);
 }
 
 static int

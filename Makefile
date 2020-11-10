@@ -48,7 +48,7 @@ obj/%.o: src/%.c $(DEPS)
 TESTS = obj/buf_test.o \
         obj/strbuf_test.o obj/strbuf.o \
         obj/sorting_test.o obj/sorting.o \
-		obj/regex_test.o obj/regex.o \
+        obj/regex_test.o obj/regex.o \
         obj/utils_test.o obj/utils.o
 bin/runtests: obj/runtests.o obj/utils.o $(TESTS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
@@ -59,6 +59,7 @@ dist: clean
 check: tests
 	@echo "Running Test Suite..."
 	bin/runtests
+	/bin/sh src/edit_test.sh
 
 clean:
 	rm -f bin/* obj/*.o
