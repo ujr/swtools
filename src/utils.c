@@ -264,13 +264,48 @@ checkioerr()
   return SUCCESS;
 }
 
+/* message: format and append \n, write to stdout */
+void
+message(const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  vfprintf(stdout, fmt, ap);
+  fprintf(stdout, "\n");
+  va_end(ap);
+}
+
+/* debug: prefix progname and write to stderr */
 void
 debug(const char *fmt, ...)
 {
   va_list ap;
   if (verbosity < 1) return;
   va_start(ap, fmt);
+  fprintf(stderr, "%s: ", me);
   vfprintf(stderr, fmt, ap);
   va_end(ap);
 }
 
+/* error: prefix progname and write to stderr */
+void
+error(const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  fprintf(stderr, "%s: ", me);
+  vfprintf(stderr, fmt, ap);
+  va_end(ap);
+}
+
+/* fatal: prefix progname, write to stderr, exit */
+void
+fatal(const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  fprintf(stderr, "%s: ", me);
+  vfprintf(stderr, fmt, ap);
+  va_end(ap);
+  longjmp(errjmp, 1);
+}

@@ -132,6 +132,7 @@ main(int argc, char **argv)
   toolname = 0;
   progname = getprog(argv);
   if (!progname) return FAILHARD;
+  me = progname;
 
   if (setjmp(errjmp)) {
     printerr("giving up");

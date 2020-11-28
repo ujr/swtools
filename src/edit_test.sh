@@ -5,6 +5,8 @@ trap 'rm -f "$TMPFILE"' EXIT
 TMPFILE=$(mktemp) || exit 1
 echo "Using temp file $TMPFILE"
 
+echo "Testing the editor"
+
 RED="\033[31m"
 RESET="\033[0m"
 error() { printf "${RED}$* FAILED${RESET}\n"; }

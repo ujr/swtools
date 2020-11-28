@@ -1,5 +1,6 @@
 /* Test Runner */
 
+#include <setjmp.h>
 #include <stdio.h>
 
 #include "test.h"
@@ -14,6 +15,7 @@ extern void utils_test(int *pnumpass, int *pnumfail);
 
 const char *me = "runtests";
 int verbosity = 0; /* ref'd from utils.c */
+jmp_buf errjmp;
 
 int
 main(int argc, char **argv)

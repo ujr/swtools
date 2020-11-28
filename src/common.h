@@ -55,7 +55,11 @@ int getln(char **buf, size_t *len, FILE *fp);
 char *strclone(const char *s);
 void printerr(const char *msg);
 int checkioerr();
-void debug(const char *fmt, ...);
+
+void message(const char *fmg, ...); /* write to stdout, append newline */
+void debug(const char *fmt, ...); /* write to stderr, if verbose */
+void error(const char *fmt, ...); /* always write to stderr */
+void fatal(const char *fmt, ...); /* write to stderr and exit */
 
 /* translit.c */
 
@@ -80,3 +84,4 @@ int shufflecmd(int argc, char **argv);
 int findcmd(int argc, char **argv);
 int changecmd(int argc, char **argv);
 int editcmd(int argc, char **argv);
+int definecmd(int argc, char **argv);

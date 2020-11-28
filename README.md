@@ -15,6 +15,13 @@ and their restatement in C can be found in [doc/Tools.md](doc/Tools.md).
 General notes not directly related to the book or the tools can be
 found in [doc/Notes.md](doc/Notes.md).
 
+## Getting Started
+
+Clone the repository and run `make` in the checkout directory.
+This will build the executable file in the *bin/* directory.
+Run `make check` to run the unit tests.
+For all else, read the source.
+
 ## Structure
 
 While the book presents many separate tools, the implementation

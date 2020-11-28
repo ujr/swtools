@@ -150,11 +150,10 @@ static opstate doundo(edstate *ped);
 static opstate doredo(edstate *ped);
 
 /* output routines and miscellaneous */
-static void message(const char *fmt, ...); /* appends newline */
 static void putline(const char *line); /* expects newline */
 static void sigint(int signo);
 static opstate checkint(opstate status);
-static opstate error(edstate *ped, const char *msg);
+static opstate ederr(edstate *ped, const char *msg);
 static int parseopts(int argc, char **argv);
 static void usage(const char *errmsg);
 
@@ -311,14 +310,14 @@ getone(edstate *ped, const char *cmd, int *pi, int *pnum)
       if (status == ED_OK)
         *pnum += sign * nextnum;
       else if (status == ED_END)
-        status = error(ped, "syntax error");
+        status = ederr(ped, "syntax error");
     }
     else
       status = ED_END;
   }
 
   if (*pnum < 0 || *pnum > ped->lastln)
-    status = error(ped, "line number out of range");
+    status = ederr(ped, "line number out of range");
 
   if (status == ED_ERR)
     return status;
@@ -368,7 +367,7 @@ optpat(edstate *ped, const char *cmd, int *pi)
 
   if (!cmd[*pi] || !cmd[*pi+1]) {
     strbuf_trunc(&ped->patbuf, 0);
-    return error(ped, "missing search pattern");
+    return ederr(ped, "missing search pattern");
   }
 
   if (cmd[*pi+1] == cmd[*pi]) {
@@ -380,7 +379,7 @@ optpat(edstate *ped, const char *cmd, int *pi)
   n = makepat(cmd+*pi+1, delim, &ped->patbuf);
   if (n == 0) {
     strbuf_trunc(&ped->patbuf, 0);
-    return error(ped, "invalid search pattern");
+    return ederr(ped, "invalid search pattern");
   }
 
   *pi += n + 1; /* skip pat and delim */
@@ -404,7 +403,7 @@ patscan(edstate *ped, char direction, int *pnum)
     }
   } while (n != ped->curln);
 
-  return error(ped, "context search mismatch");
+  return ederr(ped, "context search mismatch");
 }
 
 static opstate /* get right-hand-side of "s" command */
@@ -413,12 +412,12 @@ getsub(edstate *ped, const char *cmd, int *pi, bool *gflag)
   int n;
   char delim;
   if (!cmd[*pi] || !cmd[*pi+1])
-    return error(ped, "expect replacement text");
+    return ederr(ped, "expect replacement text");
   delim = cmd[*pi];
   *pi += 1;
   n = makesub(cmd+*pi, delim, &ped->subbuf);
   if (n < 0)
-    return error(ped, "invalid replacement text");
+    return ederr(ped, "invalid replacement text");
   *pi += n;
   *pi += 1;
   if (cmd[*pi] == 'g') {
@@ -435,19 +434,19 @@ gettrl(edstate *ped, const char *cmd, int *pi, bool *cflag)
   int i;
   char delim;
   if (!cmd[*pi] || !cmd[*pi+1])
-    return error(ped, "translit: missing arguments");
+    return ederr(ped, "translit: missing arguments");
   delim = cmd[*pi]; *pi += 1;
   strbuf_trunc(&ped->linebuf, 0);
   i = dodash(cmd, *pi, delim, &ped->linebuf);
   if (cmd[i] != delim)
-    return error(ped, "translit: syntax error");
+    return ederr(ped, "translit: syntax error");
   *pi = i+1;
   if (!cmd[*pi])
-    return error(ped, "translit: missing arguments");
+    return ederr(ped, "translit: missing arguments");
   strbuf_trunc(&ped->subbuf, 0);
   i = dodash(cmd, *pi, delim, &ped->subbuf);
   if (cmd[i] != delim)
-    return error(ped, "translit: syntax error");
+    return ederr(ped, "translit: syntax error");
   *pi = i+1;
   *cflag = cmd[*pi] == 'c'; /* complement */
   if (*cflag) *pi += 1;
@@ -463,13 +462,13 @@ getfn(edstate *ped, const char *cmd, int *pi)
   skipblank(cmd, pi);
   if (cmd[*pi] == NEWLINE || !cmd[*pi])
     return strbuf_len(&ped->fnbuf) > 0 ? ED_OK
-      : error(ped, "no remembered filename");
+      : ederr(ped, "no remembered filename");
   if (!gotblank) /* at least one blank required */
-    return error(ped, "syntax error");
+    return ederr(ped, "syntax error");
   if (cmd[*pi] == '"') {
     strbuf_trunc(&ped->linebuf, 0);
     if (!(n = scanstr(cmd + *pi, &ped->linebuf)))
-      return error(ped, "filename: bad string argument");
+      return ederr(ped, "filename: bad string argument");
     *pi += n;
     gotname = 1;
   }
@@ -483,7 +482,7 @@ getfn(edstate *ped, const char *cmd, int *pi)
   }
   skipblank(cmd, pi);
   if (cmd[*pi] != 0 && cmd[*pi] != NEWLINE)
-    return error(ped, "filename: too many arguments");
+    return ederr(ped, "filename: too many arguments");
   if (gotname) { /* replace remembered name */
     strbuf_trunc(&ped->fnbuf, 0);
     strbuf_add(&ped->fnbuf, &ped->linebuf);
@@ -501,7 +500,7 @@ defaultlines(edstate *ped, int def1, int def2)
   }
   if (ped->line1 > 0 && ped->line1 <= ped->line2)
     return ED_OK;
-  return error(ped, "line numbers out of range");
+  return ederr(ped, "line numbers out of range");
 }
 
 static int /* the line after n, wrapping to 0 */
@@ -559,7 +558,7 @@ bufput(edstate *ped, const char *line)
   bufitem newitem;
   int m;
   const char *copy = strclone(line);
-  if (!copy) return error(ped, "out of memory");
+  if (!copy) return ederr(ped, "out of memory");
   /* append at end of buffer */
   newitem = makebuf(copy);
   m = (int) buf_size(ped->buffer);
@@ -691,7 +690,7 @@ updateln(edstate *ped, int n, const char *lines)
   size_t len = strlen(lines);
   /* trailing newline is required */
   if (len < 1 || lines[len-1] != NEWLINE)
-    return error(ped, "must not remove trailing newline");
+    return ederr(ped, "must not remove trailing newline");
   if (streq(lines, bufget(ped, n)))
     return ED_OK; /* line did not change */
   status = delete(ped, n, n);
@@ -793,7 +792,7 @@ docmd(edstate *ped, const char *cmd, int *pi, bool glob)
     case MCMD: /* move */
       status = getone(ped, cmd, pi, &line3);
       if (status == ED_END)
-        status = error(ped, "expect line address argument");
+        status = ederr(ped, "expect line address argument");
       else if (status == ED_OK)
         if ((status = checkp(ped, cmd, pi, &pflag)) == ED_OK)
           if ((status = defaultlines(ped, ped->curln, ped->curln)) == ED_OK)
@@ -862,7 +861,7 @@ docmd(edstate *ped, const char *cmd, int *pi, bool glob)
           status = ED_END;
         else {
           ped->wantquit = true;
-          status = error(ped, "again to quit");
+          status = ederr(ped, "again to quit");
         }
       }
       break;
@@ -880,7 +879,7 @@ docmd(edstate *ped, const char *cmd, int *pi, bool glob)
       status = dodebug(ped, nc);
       break;
     default:
-      status = error(ped, "unknown command");
+      status = ederr(ped, "unknown command");
       break;
   }
 
@@ -895,14 +894,14 @@ static opstate
 cknoargs(edstate *ped, char nc)
 {
   if (!nc || nc == NEWLINE) return ED_OK;
-  return error(ped, "expect no arguments");
+  return ederr(ped, "expect no arguments");
 }
 
 static opstate
 cknolines(edstate *ped)
 {
   if (ped->nlines == 0) return ED_OK;
-  return error(ped, "expect no line addresses");
+  return ederr(ped, "expect no line addresses");
 }
 
 static opstate
@@ -918,7 +917,7 @@ checkp(edstate *ped, const char *cmd, int *pi, bool *ppflag)
     *ppflag = false;
   }
   if (cmd[*pi] == NEWLINE || !cmd[*pi]) return ED_OK;
-  return error(ped, "too many arguments");
+  return ederr(ped, "too many arguments");
 }
 
 static opstate /* print lines n1..n2 */
@@ -927,7 +926,7 @@ doprint(edstate *ped, int n1, int n2)
   int n;
   opstate status = ED_OK;
   if (n1 <= 0 || n1 > n2 || n2 > ped->lastln)
-    return error(ped, "line numbers out of range");
+    return ederr(ped, "line numbers out of range");
   for (n = n1; n <= n2; n++) {
     const char *s = bufget(ped, n);
     putline(s);
@@ -942,7 +941,7 @@ doappend(edstate *ped, int n, bool glob)
 {
   opstate status;
   if (glob)
-    return error(ped, "not implemented with global command");
+    return ederr(ped, "not implemented with global command");
   pushcmd(ped, 'a');
   status = append(ped, n);
   pushend(ped);
@@ -955,7 +954,7 @@ dodelete(edstate *ped, int n1, int n2)
   opstate status;
   int last = ped->lastln;
   if (n1 <= 0 || n1 > n2 || n2 > last)
-    return error(ped, "line numbers out of range");
+    return ederr(ped, "line numbers out of range");
   pushcmd(ped, 'd');
   status = delete(ped, n1, n2);
   pushend(ped);
@@ -967,7 +966,7 @@ dochange(edstate *ped, int n1, int n2, bool glob)
 {
   opstate status;
   if (glob)
-    return error(ped, "not implemented with global command");
+    return ederr(ped, "not implemented with global command");
   pushcmd(ped, 'c');
   if ((status = delete(ped, n1, n2)) == ED_OK)
     status = append(ped, prevln(ped, n1));
@@ -982,9 +981,9 @@ domove(edstate *ped, int n3)
   int n2 = ped->line2;
   int k = n2 - n1 + 1;
   if (n1 <= 0 || n1 > n2 || n2 > ped->lastln)
-    return error(ped, "line numbers out of range");
+    return ederr(ped, "line numbers out of range");
   if (n1 <= n3 && n3 <= n2)
-    return error(ped, "target address in source range");
+    return ederr(ped, "target address in source range");
   pushcmd(ped, 'm');
   bufmove(ped, n1, n2, n3);
   if (n3 > n1) ped->curln = n3;
@@ -998,9 +997,9 @@ dojoin(edstate *ped, int n1, int n2)
 {
   opstate status;
   if (n1 <= 0 || n1 > n2 || n2 > ped->lastln)
-    return error(ped, "line numbers out of range");
+    return ederr(ped, "line numbers out of range");
   if (n1 == n2)
-    return error(ped, "cannot join one line");
+    return ederr(ped, "cannot join one line");
   status = joinlines(ped, n1, n2);
   if (status != ED_OK) return status;
   pushcmd(ped, 'j');
@@ -1043,7 +1042,7 @@ dosubst(edstate *ped, bool gflag, bool glob)
 
   if (status == ED_OK && tally == 0 && !glob) {
     popundo(ped);
-    status = error(ped, "no substitutions made");
+    status = ederr(ped, "no substitutions made");
   }
   else pushend(ped);
 
@@ -1081,7 +1080,7 @@ doread(edstate *ped, int n)
   const char *fn = strbuf_ptr(&ped->fnbuf);
 
   FILE *fp = fopen(fn, "r");
-  if (!fp) return error(ped, "cannot open file");
+  if (!fp) return ederr(ped, "cannot open file");
 
   pushcmd(ped, 'r');
 
@@ -1094,8 +1093,8 @@ doread(edstate *ped, int n)
 
   pushend(ped);
 
-  if (ferror(fp)) status = error(ped, "I/O error");
-  if (fclose(fp)) status = error(ped, "I/O error");
+  if (ferror(fp)) status = ederr(ped, "I/O error");
+  if (fclose(fp)) status = ederr(ped, "I/O error");
   if (status == ED_OK)
     message("%d", numlines);
   return status;
@@ -1109,15 +1108,15 @@ dowrite(edstate *ped, int n1, int n2, bool append)
   const char *fn = strbuf_ptr(&ped->fnbuf);
 
   FILE *fp = fopen(fn, append ? "a" : "w");
-  if (!fp) return error(ped, "cannot open file");
+  if (!fp) return ederr(ped, "cannot open file");
 
   for (n = n1; n <= n2; n++) {
     const char *line = bufget(ped, n);
     if (fputs(line, fp) < 0) break;
   }
 
-  if (ferror(fp)) status = error(ped, "I/O error");
-  if (fclose(fp)) status = error(ped, "I/O error");
+  if (ferror(fp)) status = ederr(ped, "I/O error");
+  if (fclose(fp)) status = ederr(ped, "I/O error");
   if (status == ED_OK) {
     message("%d", n2 - n1 + 1);
     if (n1 == 1 && n2 == ped->lastln)
@@ -1275,7 +1274,7 @@ static opstate /* try to undo the last command */
 doundo(edstate *ped)
 {
   if (ped->uptr == 0)
-    return error(ped, "undo stack empty");
+    return ederr(ped, "undo stack empty");
 
   /* undo stack: ... cmd { move } [ end ] ^ ... */
 
@@ -1299,7 +1298,7 @@ doredo(edstate *ped)
 {
   size_t n = buf_size(ped->ustk);
   if (ped->uptr >= n)
-    return error(ped, "no undone actions to redo");
+    return ederr(ped, "no undone actions to redo");
 
   /* undo stack: ... ^ cmd { move } [ end ] ... */
 
@@ -1316,16 +1315,6 @@ doredo(edstate *ped)
     else continue;
   }
   return ED_OK;
-}
-
-static void
-message(const char *fmt, ...)
-{
-  va_list ap;
-  va_start(ap, fmt);
-  vfprintf(stdout, fmt, ap);
-  fprintf(stdout, "\n");
-  va_end(ap);
 }
 
 static void
@@ -1350,7 +1339,7 @@ checkint(opstate status)
 }
 
 static opstate /* set message and return ERR */
-error(edstate *ped, const char *msg)
+ederr(edstate *ped, const char *msg)
 {
   ped->errhelp = msg;
   return ED_ERR;
