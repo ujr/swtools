@@ -20,7 +20,8 @@ tests: bin/runtests
 
 TOOLS = obj/copy.o obj/count.o obj/echo.o obj/detab.o obj/translit.o \
   obj/compare.o obj/include.o obj/concat.o obj/print.o obj/sort.o \
-  obj/unique.o obj/shuffle.o obj/find.o obj/change.o obj/edit.o
+  obj/unique.o obj/shuffle.o obj/find.o obj/change.o obj/edit.o \
+  obj/define.o
 bin/quux: obj/main.o $(TOOLS) obj/strbuf.o obj/sorting.o obj/lines.o obj/regex.o obj/utils.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 

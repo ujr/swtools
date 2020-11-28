@@ -31,19 +31,21 @@ A selection of **guiding principles** and **best practices** from
 the book (some have modern names, given here in parentheses):
 
 - “there is great temptation to add more and more features” [p.80]
-  (_creaping featurism_)
+  (*creaping featurism*)
 - when an option is left unspecified, this is never an error
   (options are optional); instead choose some default value and
   “try not to surprise your users” [p.80]
-  (_principle of least surprise_)
+  (*principle of least surprise*)
 - “people cost a great deal more than machines” [p.82]
 - “proper separation of function” [p.131]
-  (_separation of concerns_, which is an old design principle)
-- “start testing as soon as possible” (_test driven development_)
+  (*separation of concerns*, which is an old design principle)
+- “start testing as soon as possible” (*test driven development*)
   and “top-down testing is a natural extension of top-down
   design and top-down coding” [p.146]
 - if you build something, “make sure it has some conceptual
-  integrity” and “build it in increments” [p.263] (be _agile_)
+  integrity” and “build it in increments” [p.263] (be *agile*)
+- “information hiding is critical to program design” [p.275]
+  (*information hiding*)
 - “rewriting will always remain an important part of programming”
   [p.311] (*refactoring*, that is, reading and revising)
 
@@ -72,7 +74,7 @@ about bugs.
 The example allows users (a) to reinforce their understanding,
 and (b) to check that the program works properly.
 The section on bugs is not for programming problems, but to
-warn about shortcomings in the _design_ that could be improved
+warn about shortcomings in the *design* that could be improved
 but are not worth the effort, at least not for now.
 
 For the section headings I follow the Linux conventions,
@@ -134,9 +136,9 @@ because they share a lot of code.
 ## Compress and Expand
 
 The *compress* and *expand* (uncompress) tools implement a simple
-run-length encoding, where runs of _n_ times a character _x_ are
+run-length encoding, where runs of *n* times a character *x* are
 encoded as *~Nx* where the tilde ~ is arbitrarily chosen as a
-rarely-used character and _N_ is 'A'+_n_.
+rarely-used character and *N* is 'A'+*n*.
 A literal `~` would be encoded as `~A~` and is thus three times
 longer. Interesting is **exercise 2-14:**
 
@@ -176,15 +178,15 @@ of information: a character buffer, its size, and the length of
 the string within this buffer. It might be tempting to join the
 buffer and the housekeeping (size and length) into a single
 allocation, and to hide the housekeeping part so that the buffer
-_looks like_ a regular C string (see, e.g., [growable-buf][growable-buf]
+*looks like* a regular C string (see, e.g., [growable-buf][growable-buf]
 and [sds][sds]). The downside is that such schemes potentially
 return a new buffer pointer on each append operation, and
 that such strings are easily confused with plain C strings.
 My implementation, *strbuf*, is an explicit string buffer
 with separate housekeepking.
 
-By the way, both the book and the man page speak of _character_
-transliteration, but it really is _byte by byte_ transliteration.
+By the way, both the book and the man page speak of *character*
+transliteration, but it really is *byte by byte* transliteration.
 With ASCII (and other one-byte-per-character encodings) this makes
 no difference. But with multi-byte encodings (e.g. UTF-8)
 this does make a difference, but I ignore it here.
@@ -219,9 +221,9 @@ lines if only one line has been added or deleted.
 
 **Exercise 3-5** asks what happens if *compare* is asked to
 compare a file with itself, that is: **compare _f_ _f_**  
-If _f_ is a named file, this should and will work: _f_ is
+If *f* is a named file, this should and will work: *f* is
 opened twice, each open file has its own file pointer, and
-its own current offset. If _f_ refers to the standard input
+its own current offset. If *f* refers to the standard input
 (can be achieved with **compare - -** or **foo | compare -**),
 an already opened file, then there is only one file pointer
 and only one current offset, so that *compare* would compare
@@ -233,7 +235,7 @@ by defining standard input to be identical to itself.
 
 The **include** tool copies input to standard output, replacing
 any line beginning `#include "filename"` with the contents of
-_filename_, which can itself include other files. This is exactly
+*filename*, which can itself include other files. This is exactly
 like the `#include` mechanism of the C preprocessor. It can be
 used to stitch files together from smaller files.
 
@@ -280,12 +282,12 @@ input and output routines, and a way to cope with *big* files
 (larger than fit into memory).
 
 **Bubble sort** [p.109] is simple, well-known, but slow (running
-time grows as _n_ squared when _n_ is the input size).
+time grows as *n* squared when *n* is the input size).
 **Shell sort** [p.110] is more complex, faster, and like Bubble sort,
 it requires no auxiliary memory; its details are intricate
 and for a real-world application a good library routine
 should be preferred over a home-grown implementation.
-**Quicksort** [p.117] runs on average in _n_ log _n_ time and
+**Quicksort** [p.117] runs on average in *n* log *n* time and
 is remarkably simple when described recursively; other than
 Shell sort, it requires a small amount of auxiliary memory,
 either implicitly in the call stack, or with an explicit stack.
@@ -303,10 +305,10 @@ For a real-world application, consider using the C library's
 >
 > - the empty input (length 0)
 > - a single item (length 1)
-> - _n_ random items
-> - _n_ sorted items
-> - _n_ reverse-sorted items
-> - _n_ identical items
+> - *n* random items
+> - *n* sorted items
+> - *n* reverse-sorted items
+> - *n* identical items
 
 The first approach at the *sort* tool assumes that the whole
 input fits into memory and thus an internal sort can be used.
@@ -411,8 +413,8 @@ shuffle(array, n):
     swap(array, k, n)
 ```
 
-The shuffle tool loads all lines into memory. There is not
-“external shuffling” as there is for sort.
+The shuffle tool loads all lines into memory.
+There is no “external shuffling” as there is for sort.
 
 ## Adjacent Duplicate Lines
 
@@ -430,7 +432,7 @@ first non-duplicate line. Only now can we emit the number
 and the line. The overall plan is this:
 
 ```text
-read 1st line into buf0; return if eof
+read 1st line into buf0; return if eof; num=1
 while read next line into buf1:
   if same as buf0: ++num;
   else: emit(num, buf0); swap buf0/buf1; num=1
@@ -615,6 +617,50 @@ line found is immediately unmarked and introduced lines, if
 any, are never marked. Therefore, in `doglob`, eventually
 only the `else` branch within the loop will be taken
 and `count` incremented beyond `lastln`.
+
+## Macro Processing
+
+Macros extend an underlying language by expanding certain
+keywords (or other syntactic constructs) with some replacement
+text. This process is called *macro expansion* and the tool
+that performs it is a *macro processor*.
+
+The book approaches macro processing in two steps: first
+is a tool **define** that replaces words by some string,
+such that after the definition `define(EOF, -1)` all
+occurrences of the word `EOF` will be replaced by `-1`.
+Second is a tool **macro** that allows macros to have
+arguments, as in `define(putchar(c), fputc(c, stdout))`,
+and will provide a number of built-ins for conditional macros,
+arithmetics, and the like.
+
+Fundamental design decisions for the book's macro processor:
+
+- The unit of replacement: an identifier in a typical language.
+- Lazy expansion: expansion will be done as late as possible.
+- Rescanning: a macro's replacement text undergoes again macro expansion.
+
+This implies that an invocation of `x` after `define(x,x)`
+produces an infinite loop, but also that in both cases below,
+`y` produces `1` (good because the user does not have to
+care about the ordering).
+
+```text
+define(x, 1)                define(y, x)
+define(y, x)                define(x, 1)
+```
+
+The overall structure of the macro processor is:
+
+```text
+while gettok(token) != ENDFILE:
+  if token is "define":
+    install new token and replacement text
+  else if lookup(token) succeeds:
+    switch input to token's replacement text
+  else
+    copy token to output
+```
 
 ## Possible Improvements
 

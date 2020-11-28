@@ -1,0 +1,39 @@
+.TH DEFINE 1 November\ 2020 local
+
+.SH NAME
+define \- expand string definitions
+
+.SH SYNOPSIS
+\fBdefine\fP [files]
+
+.SH DESCRIPTION
+\fBdefine\fP reads its input, looking for macro definitions of the form
+.nf
+.RS
+define(ident, string)
+.RE
+.fi
+and writes its output with each subsequent instance of the identifier
+\fIident\fP replaced by the sequence of characters \fIstring\fP.
+\fIString\fP must be balanced in parentheses. The text of each
+definition proper results in no output text. Each replacement
+string is rescanned for further possible replacements, permitting
+multi-level definitions.
+
+.SH EXAMPLE
+.nf
+.RS
+$ \fBdefine\fP
+define(ENDFILE, (-1))
+define(DONE, ENDFILE)
+    if (getit(line) = DONE) then
+        putit(sumline);
+<EOF>
+\fI   if (getit(line) = (-1)) then
+       putit(sumline);\fP
+.RE
+.fi
+
+.SH BUGS
+A recursive definition such as \fBdefine(x,x)\fP will cause
+an infinite loop when \fBx\fP is invoked.

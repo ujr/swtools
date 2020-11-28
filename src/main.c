@@ -29,6 +29,7 @@ struct {
   { "find", findcmd },
   { "change", changecmd },
   { "edit", editcmd },
+  { "define", definecmd },
   { 0, 0 }
 };
 
