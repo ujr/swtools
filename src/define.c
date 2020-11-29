@@ -1,16 +1,11 @@
 
 #include <ctype.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #include "common.h"
 #include "strbuf.h"
-
-static void nomem(void)
-{
-  printerr("out of memory");
-  longjmp(errjmp, 1);
-}
 
 #define BUF_ABORT nomem()
 #include "buf.h"
@@ -18,7 +13,7 @@ static void nomem(void)
 #define STR(sp) strbuf_ptr(sp)
 #define HASHSIZE 53  /* prime */
 
-typedef enum { UNDEF, DEFTYPE, MACTYPE } sttype;
+typedef enum { UNDEF, DEFTYPE, MACTYPE, FORGET, DNL, DUMPSYMS } sttype;
 
 struct ndblock {
   size_t nameofs;
@@ -28,10 +23,13 @@ struct ndblock {
 };
 
 static int gettok(strbuf *sp, FILE *fp);
-static void getdef(strbuf *pname, strbuf *ptext, FILE *fp);
+static bool getdef(strbuf *pname, strbuf *ptext, FILE *fp);
+static bool getnamearg(strbuf *pname, FILE *fp);
 
 static sttype lookup(const char *pname, const char **pptext);
 static void install(const char *pname, const char *ptext, sttype tt);
+static void forget(const char *pname);
+static void dumpsyms(void);
 static void hashinit(void);
 static void hashfree(void);
 static struct ndblock *hashfind(const char *s);
@@ -42,6 +40,7 @@ static void putback(char c);
 static void pbstr(const char *s);
 static void skipbl(FILE *fp);
 
+/* TODO possible opts: hashsize, recursion/iteration limit */
 static int parseopts(int argc, char **argv);
 static void usage(const char *errmsg);
 
@@ -64,19 +63,38 @@ definecmd(int argc, char **argv)
 
   hashinit();
   install("define", 0, DEFTYPE);
+  install("forget", 0, FORGET);
+  install("dnl", 0, DNL);
+  install("dumpsyms", 0, DUMPSYMS);
+
   while ((c = gettok(&tokbuf, stdin)) != EOF) {
     token = strbuf_ptr(&tokbuf);
     if (!isalpha(c))
       putstr(token);
     else if ((tt = lookup(token, &defn)) == UNDEF)
       putstr(token);
-    else if (tt == DEFTYPE) {
-      getdef(&tokbuf, &defbuf, stdin);
-      install(STR(&tokbuf), STR(&defbuf), MACTYPE);
+    else switch (tt) {
+      case DEFTYPE:
+        if (getdef(&tokbuf, &defbuf, stdin))
+          install(STR(&tokbuf), STR(&defbuf), MACTYPE);
+        break;
+      case FORGET:
+        if (getnamearg(&tokbuf, stdin))
+          forget(STR(&tokbuf));
+        break;
+      case DNL:
+        do c = gettok(&tokbuf, stdin);
+        while (c != '\n' && c != EOF);
+        break;
+      case DUMPSYMS:
+        dumpsyms();
+        break;
+      default:
+        pbstr(defn);  /* push replacement text to unput stack */
     }
-    else
-      pbstr(STR(&defbuf));
   }
+
+  debug("{symbuf size: %ld}", strbuf_len(&symbuf));
 
   hashfree();
   strbuf_free(&tokbuf);
@@ -105,7 +123,7 @@ gettok(strbuf *sp, FILE *fp)
 }
 
 /* getdef: read "(name, \s*, balanced)" */
-static void
+static bool
 getdef(strbuf *pname, strbuf *ptext, FILE *fp)
 {
   int c, nlpar;
@@ -129,8 +147,35 @@ getdef(strbuf *pname, strbuf *ptext, FILE *fp)
       else if (c == ')') nlpar--;
     }
     strbuf_trunc(ptext, strbuf_len(ptext) - 1); /* omit closing paren */
+    return true;
   }
+  return false;
 }
+
+static bool
+getnamearg(strbuf *pname, FILE *fp)
+{
+  if (getpbc(fp) != '(')
+    message("{forget: missing left paren}");
+  else if (!isalpha(gettok(pname, fp)))
+    message("{forget: expecting macro name}");
+  else if (getpbc(fp) != ')')
+    message("{forget: missing right paren}");
+  else
+    return true;
+  return false;
+}
+
+static void
+skipbl(FILE *fp)
+{
+  char c;
+  do c = getpbc(fp);
+  while (c == ' ' || c == '\t');
+  putback(c); /* went one too far */
+}
+
+/* symbol table */
 
 static sttype
 lookup(const char *pname, const char **pptext)
@@ -160,6 +205,43 @@ install(const char *pname, const char *ptext, sttype tt)
   strbuf_addz(&symbuf, ptext ? ptext : "");
   strbuf_addc(&symbuf, '\0');
   ndptr->kind = tt;
+}
+
+static void
+forget(const char *pname)
+{
+  int h = hash(pname);
+  struct ndblock *p = hashtab[h];
+  struct ndblock **q = &hashtab[h];
+  /* unlink needs pointer to prev ndblock */
+
+  while (p) {
+    const char *s = strbuf_ptr(&symbuf) + p->nameofs;
+    if (streq(s, pname)) {
+      *q = p->next; /* unlink */
+      free(p);
+      return;
+    }
+    q = &(p->next);
+    p = p->next;
+  }
+  /* silently not found */
+}
+
+/* dumpsyms: dump the symbol table to stderr */
+static void
+dumpsyms(void)
+{
+  int i;
+  const char *base = strbuf_ptr(&symbuf);
+  for (i = 0; i < HASHSIZE; i++) {
+    struct ndblock *p = hashtab[i];
+    while (p) {
+      debug("{%2d:%s=%d,%s}", i, base+p->nameofs, p->kind, base+p->defnofs);
+      p = p->next;
+    }
+  }
+  debug("{hashsize is %d}", HASHSIZE);
 }
 
 static void
@@ -205,31 +287,27 @@ hash(const char *s)
   return h;
 }
 
+/* push back onto input */
 
-static int getpbc(FILE *fp)
+static int
+getpbc(FILE *fp)
 {
   if (buf_size(pushbuf) > 0)
     return buf_pop(pushbuf);
   return getc(fp);
 }
 
-static void putback(char c)
+static void
+putback(char c)
 {
   buf_push(pushbuf, c);
 }
 
-static void pbstr(const char *s)
+static void
+pbstr(const char *s)
 {
   size_t len = strlen(s);
   while (len > 0) putback(s[--len]);
-}
-
-static void skipbl(FILE *fp)
-{
-  char c;
-  do c = getpbc(fp);
-  while (c == ' ' || c == '\t');
-  putback(c); /* went one too far */
 }
 
 static int

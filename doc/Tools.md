@@ -662,10 +662,31 @@ while gettok(token) != ENDFILE:
     copy token to output
 ```
 
+```text
+define(d, define)
+d(a,b)
+d                      // expands to b
+
+define(define, x)
+define(a,b)            // expands to x(a,b)
+
+define(empty,)
+empty                  // expands to the empty string
+define(,oops)          // error: invalid macro name
+define( x ,oops)       // error: invalid macro name
+
+define(x,y)
+define(y,x)
+x                      // infinite loop!
+
+define(x, x x)
+x                      // eats all your memory!
+```
+
 ## Possible Improvements
 
-- count: accept arguments that name files
 - count: an option to count UTF-8 characters
+- include: relative to current file, not working dir
 - print: parameters for offset and count
 - sort: acccept multiple file arguments
 - unique: options -d and -f (as in sort)
