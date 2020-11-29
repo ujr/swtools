@@ -4,6 +4,8 @@
 
 #include "common.h"
 
+static void errmsg(const char *fmt, va_list ap);
+
 /* getprog: get program name from argument vector */
 const char *
 getprog(char **argv)
@@ -14,7 +16,7 @@ getprog(char **argv)
     p = s = *argv;
     while (*p) {
       if (*p++ == '/') {
-        if (p) s = p; // advance
+        if (p) s = p; /* advance */
       }
     }
   }
@@ -45,7 +47,7 @@ scanint(const char *s, int *v)
   }
 
   if (v) *v = neg ? n : -n;
-  return p - s; // #chars scanned
+  return p - s; /* #chars scanned */
 }
 
 size_t
@@ -53,7 +55,7 @@ scanspace(const char *s)
 {
   const char *p = s;
   while (isspace(*p)) ++p;
-  return p - s; // #chars scanned
+  return p - s; /* #chars scanned */
 }
 
 void
@@ -115,16 +117,16 @@ dodash(const char *s, int i, char delim, strbuf *buf)
   int i0 = i;
   while (s[i] && s[i] != delim) {
     if (s[i] == ESC)
-      strbuf_addc(buf, escape(s, &i)); // escape
+      strbuf_addc(buf, escape(s, &i)); /* escape */
     else if (s[i] != DASH)
-      strbuf_addc(buf, s[i++]); // normal character
+      strbuf_addc(buf, s[i++]); /* normal character */
     else if (i == i0 || s[i+1] == delim || s[i+1] == 0)
-      strbuf_addc(buf, DASH), ++i; // literal dash at start or end
-    else if (s[i-1] <= s[i+1]) { // character range
+      strbuf_addc(buf, DASH), ++i; /* literal dash at start or end */
+    else if (s[i-1] <= s[i+1]) { /* character range */
       for (char c = s[i-1]+1; c <= s[i+1]; c++) {
         strbuf_addc(buf, c);
       }
-      i += 2; // skip dash and upper bound
+      i += 2; /* skip dash and upper bound */
     }
     else strbuf_addc(buf, s[i++]);
   }
@@ -138,7 +140,7 @@ openin(const char *filepath)
   if (!filepath || streq(filepath, "-"))
     return stdin;
   FILE *fp = fopen(filepath, "rb");
-  if (!fp) printerr(filepath);
+  if (!fp) error("cannot open %s", filepath);
   return fp;
 }
 
@@ -149,7 +151,7 @@ openout(const char *filepath)
   if (!filepath || streq(filepath, "-"))
     return stdout;
   FILE *fp = fopen(filepath, "wb");
-  if (!fp) printerr(filepath);
+  if (!fp) error("cannot open %s", filepath);
   return fp;
 }
 
@@ -228,43 +230,18 @@ strclone(const char *s)
   return memcpy(t, s, len+1);
 }
 
-/* printerr: print system error message to stderr
-   Syntax: "[me][: msg][: errno]\n" */
-void
-printerr(const char *msg)
-{
-  FILE *fp = stderr;
-  extern const char *me;
-
-  if (me) {
-    fputs(me, fp);
-  }
-
-  if (msg && *msg) {
-    fputs(": ", fp);
-    fputs(msg, fp);
-  }
-
-  if (errno || !msg || !*msg) {
-    fputs(": ", fp);
-    fputs(strerror(errno), fp);
-  }
-
-  fputc('\n', fp);
-}
-
 /* checkioerr: check stream error flag, print error message */
 int
 checkioerr()
 {
   if (ferror(stdin) || ferror(stdout)) {
-    printerr(0);
+    error("I/O error");
     return FAILSOFT;
   }
   return SUCCESS;
 }
 
-/* message: format and append \n, write to stdout */
+/* message: format write line to stdout */
 void
 message(const char *fmt, ...)
 {
@@ -275,37 +252,68 @@ message(const char *fmt, ...)
   va_end(ap);
 }
 
-/* debug: prefix progname and write to stderr */
+/* debug: log line to stderr if verbose mode */
 void
 debug(const char *fmt, ...)
 {
   va_list ap;
   if (verbosity < 1) return;
   va_start(ap, fmt);
-  fprintf(stderr, "%s: ", me);
   vfprintf(stderr, fmt, ap);
+  fprintf(stderr, "\n");
   va_end(ap);
 }
 
-/* error: prefix progname and write to stderr */
+/* error: log line to stderr, append system error, if any */
 void
 error(const char *fmt, ...)
 {
   va_list ap;
+
   va_start(ap, fmt);
-  fprintf(stderr, "%s: ", me);
-  vfprintf(stderr, fmt, ap);
+  errmsg(fmt, ap);
   va_end(ap);
 }
 
-/* fatal: prefix progname, write to stderr, exit */
+/* fatal: log to stderr and jump out */
 void
 fatal(const char *fmt, ...)
 {
   va_list ap;
+
   va_start(ap, fmt);
-  fprintf(stderr, "%s: ", me);
-  vfprintf(stderr, fmt, ap);
+  errmsg(fmt, ap);
   va_end(ap);
+
   longjmp(errjmp, 1);
+}
+
+void
+nomem(void)
+{
+  fatal("out of memory");
+}
+
+/* errmsg: format and emit error message: me: msg[: errno] */
+static void
+errmsg(const char *fmt, va_list ap)
+{
+  FILE *fp = stderr;
+  extern const char *me;
+
+  if (me) {
+    fputs(me, fp);
+  }
+
+  if (fmt && *fmt) {
+    fputs(": ", fp);
+    vfprintf(fp, fmt, ap);
+  }
+
+  if (errno || !fmt || !*fmt) {
+    fputs(": ", fp);
+    fputs(strerror(errno), fp);
+  }
+
+  fputc('\n', fp);
 }

@@ -9,13 +9,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void nomem(void);
-#define BUF_ABORT nomem()
-#include "buf.h"
-
 #include "common.h"
 #include "regex.h"
 #include "strbuf.h"
+
+#define BUF_ABORT nomem()
+#include "buf.h"
 
 #define ACMD     'a'    /* append (after current line) */
 #define CCMD     'c'    /* change (replace) line(s) */
@@ -1017,7 +1016,7 @@ dosubst(edstate *ped, bool gflag, bool glob)
   int n, subs, tally = 0;
   const char *pat = strbuf_ptr(&ped->patbuf);
   const char *sub = strbuf_ptr(&ped->subbuf);
-  debug("{subst %s for %s, gflag=%d}\n", sub, pat, gflag);
+  debug("{subst %s for %s, gflag=%d}", sub, pat, gflag);
 
   if (!gflag)
     flags |= regex_subjustone;
@@ -1328,7 +1327,7 @@ sigint(int signo)
 {
   UNUSED(signo);
   intflag = 1;
-  debug("{SIGINT}\n");
+  debug("{SIGINT}");
   signal(SIGINT, &sigint); /* re-establish handler */
 }
 
@@ -1343,12 +1342,6 @@ ederr(edstate *ped, const char *msg)
 {
   ped->errhelp = msg;
   return ED_ERR;
-}
-
-static void nomem(void)
-{
-  printerr("out of memory");
-  longjmp(errjmp, 1);
 }
 
 static int

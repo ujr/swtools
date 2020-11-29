@@ -58,8 +58,12 @@ comparecmd(int argc, char **argv)
     }
   }
 
-  if (ferror(fp1) || ferror(fp2)) {
-    printerr(0);
+  if (ferror(fp1)) {
+    error("error reading %s", fn1);
+    return FAILSOFT;
+  }
+  if (ferror(fp2)) {
+    error("error reading %s", fn2);
     return FAILSOFT;
   }
 
@@ -84,8 +88,8 @@ parseopts(int argc, char **argv, bool *quiet)
 
   for (i = 1; i < argc && argv[i]; i++) {
     const char *p = argv[i];
-    if (*p != '-' || streq(p, "-")) break; // no more option args
-    if (streq(p, "--")) { ++i; break; } // end of option args
+    if (*p != '-' || streq(p, "-")) break; /* no more option args */
+    if (streq(p, "--")) { ++i; break; } /* end of option args */
     for (++p; *p; p++) {
       switch (*p) {
         case 'q': *quiet = true; break;
@@ -100,7 +104,7 @@ parseopts(int argc, char **argv, bool *quiet)
     exit(SUCCESS);
   }
 
-  return i; // #args parsed
+  return i; /* #args parsed */
 }
 
 /* equal: compare line1 and line2, return 1 if equal */

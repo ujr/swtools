@@ -37,16 +37,17 @@ static bool numeric = false;
 
 #define MERGEORDER 5
 #define PATHBUFLEN 256
-#define CHECKIOERR(fp, msg) if (ferror(fp)) { printerr(msg); return FAILSOFT; }
+#define CHECKIOERR(fp, msg) if (ferror(fp)) { \
+  error("error %s", msg); return FAILSOFT; }
 #define CHECKTMPERR(fps, n, msg) do { for (int i=0;i<n;i++) \
-  if (ferror(fps[i])) { printerr(msg); return FAILSOFT; }} while(0)
+  if (ferror(fps[i])) { error("error %s", msg); return FAILSOFT; }} while(0)
 
 int
 sortcmd(int argc, char **argv)
 {
   int r;
   FILE *fin;
-  struct lines lines = { 0, 0, 0 }; // must zero-init for buf.h
+  struct lines lines = { 0, 0, 0 }; /* must zero-init for buf.h */
 
   r = parseopts(argc, argv, &lines.chunksize);
   if (r < 0) return FAILHARD;
@@ -152,8 +153,8 @@ compare(const char *s, const char *t)
   int r, rev = reverse ? -1 : 1;
 
   if (numeric) {
-    // compare numeric prefix; ignore leading space
-    // lines w/o numeric prefix always sort at the end
+    /* compare numeric prefix; ignore leading space */
+    /* lines w/o numeric prefix always sort at the end */
     int i, j;
     s += scanspace(s);
     t += scanspace(t);
@@ -166,7 +167,7 @@ compare(const char *s, const char *t)
     }
     else if (m > 0) return -1;
     else if (n > 0) return +1;
-    // numeric prefix equal (or both missing)
+    /* numeric prefix equal (or both missing) */
   }
 
   if (dictsort) {
@@ -216,13 +217,13 @@ static void nametemp(char *buf, size_t len, int num)
   assert(n < len); /* too long for given buffer */
 }
 
-/* assume temp fil e'num' does not exist and create it */
+/* assume temp file 'num' does not exist and create it */
 static FILE *maketemp(int num)
 {
   char buf[PATHBUFLEN];
   nametemp(buf, sizeof buf, num);
   FILE *fp = fopen(buf, "w");
-  if (!fp) printerr(buf);
+  if (!fp) error("cannot create file %s", buf);
   return fp;
 }
 
@@ -232,7 +233,7 @@ static FILE *opentemp(int num)
   char buf[PATHBUFLEN];
   nametemp(buf, sizeof buf, num);
   FILE *fp = fopen(buf, "r");
-  if (!fp) printerr(buf);
+  if (!fp) error("cannot open file %s", buf);
   return fp;
 }
 
@@ -242,7 +243,7 @@ static void droptemp(int num)
   char buf[PATHBUFLEN];
   nametemp(buf, sizeof buf, num);
   int r = remove(buf);
-  if (r < 0) printerr(buf);
+  if (r < 0) error("error deleting file %s", buf);
 }
 
 /* assume temp files lo..hi exist and open them for reading */

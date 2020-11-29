@@ -23,8 +23,8 @@ detabcmd(int argc, char **argv)
       for (; col < stop; col++) putch(' ');
     }
     else if (c == '\b') {
-      putch(c); // preserve the backspace
-      if (col > 0) col -= 1; // but adjust column
+      putch(c); /* preserve the backspace */
+      if (col > 0) col -= 1; /* but adjust column */
     }
     else if (c == '\n') {
       putch(c);
@@ -51,7 +51,7 @@ entabcmd(int argc, char **argv)
   col = 0;
   do {
     newcol = col;
-    while ((c = getch()) == ' ') { // collect blanks
+    while ((c = getch()) == ' ') { /* collect blanks */
       newcol += 1;
       if (newcol == tabstop(stops, col)) {
         putch('\t');
@@ -63,7 +63,7 @@ entabcmd(int argc, char **argv)
       putch('\t');
       col = newcol;
     }
-    else while (col < newcol) { // remaining blanks
+    else while (col < newcol) { /* remaining blanks */
       putch(' ');
       col += 1;
     }
@@ -79,14 +79,14 @@ entabcmd(int argc, char **argv)
 }
 
 /*
-// Syntax: detab [t1 t2 ... tN]
-// Each tab stop t_i is the column from left margin
-// (or from the previous stop if given as +ti);
-// the leftmost column is numbered 0 (not 1).
-// If the last tab stop is prefixed with a + sign,
-// then it is repeated indefinitely; for example,
-// 2 +4 sets tabs in columns 2, 6, 10, 14, ...
-// The tab stops must not be 0 and stricty increasing.
+** Syntax: detab [t1 t2 ... tN]
+** Each tab stop t_i is the column from left margin
+** (or from the previous stop if given as +ti);
+** the leftmost column is numbered 0 (not 1).
+** If the last tab stop is prefixed with a + sign,
+** then it is repeated indefinitely; for example,
+** 2 +4 sets tabs in columns 2, 6, 10, 14, ...
+** The tab stops must not be 0 and stricty increasing.
 */
 static int
 tabinit(int stops[], int argc, char **argv)
@@ -102,19 +102,19 @@ tabinit(int stops[], int argc, char **argv)
     r = scanint(argv[i], &column);
 
     if (r <= 0 || argv[i][r] != '\0') {
-      printerr("invalid tab stop argument");
+      error("invalid tab stop argument");
       return FAILHARD;
     }
     if (column <= 0) {
-      printerr("tab stop cannot be zero or negative");
+      error("tab stop cannot be zero or negative");
       return FAILHARD;
     }
     if (j > 0 && column <= stops[j-1] && argv[i][0] != '+') {
-      printerr("tab stops must be strictly increasing");
+      error("tab stops must be strictly increasing");
       return FAILHARD;
     }
     if (j+2 >= MAXSTOPS) {
-      printerr("too many tab stops");
+      error("too many tab stops");
       return FAILHARD;
     }
 
@@ -123,10 +123,10 @@ tabinit(int stops[], int argc, char **argv)
     stops[j++] = column;
   }
 
-  if (j == 0) { // no explicit stops, assume defaults
+  if (j == 0) { /* no explicit stops, assume defaults */
     stops[j++] = TABSPACE;
   }
-  else if (!isrel) { // last not relative: add a +1 tab
+  else if (!isrel) { /* last not relative: add a +1 tab */
     stops[j] = stops[j-1] + 1;
     j++;
   }
@@ -137,7 +137,7 @@ tabinit(int stops[], int argc, char **argv)
     fprintf(stderr, "\n");
   }
 
-  stops[j] = 0; // end marker
+  stops[j] = 0; /* end marker */
   return SUCCESS;
 }
 
@@ -148,13 +148,13 @@ tabstop(int stops[], int column)
   int i = 0, r, s, o, d;
   while (0 < stops[i] && stops[i] <= column) i += 1;
 
-  if (stops[i] > 0) return stops[i]; // explicit stop
+  if (stops[i] > 0) return stops[i]; /* explicit stop */
 
-  r = i > 1 ? stops[i-2] : 0; // the second to last
-  s = i > 0 ? stops[i-1] : 0; // and the last tab stop
+  r = i > 1 ? stops[i-2] : 0; /* the second to last */
+  s = i > 0 ? stops[i-1] : 0; /* and the last tab stop */
 
-  o = s - r; // tab spaces for repeating stop
-  d = column - s; // distance to last stop
+  o = s - r; /* tab spaces for repeating stop */
+  d = column - s; /* distance to last stop */
 
   return s + (1+d/o)*o;
 }

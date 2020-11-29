@@ -10,10 +10,9 @@ echocmd(int argc, char **argv)
 {
   const char blank = ' ';
   int i, r;
-  int escapes = 0; // ignore escape sequences in arguments
-  int newline = 1; // output trailing newline
+  int escapes = 0; /* ignore escapes in arguments */
+  int newline = 1; /* output trailing newline */
 
-  SHIFTARGS(argc, argv, 1);
   r = parseopts(argc, argv, &escapes, &newline);
   if (r < 0) return FAILHARD;
   SHIFTARGS(argc, argv, r);
@@ -27,7 +26,7 @@ echocmd(int argc, char **argv)
   if (newline) putch('\n');
 
   if (ferror(stdout)) {
-    printerr(0);
+    error("error writing output");
     return FAILSOFT;
   }
 
@@ -55,21 +54,21 @@ parseopts(int argc, char **argv, int *escapes, int *newline)
 {
   int i;
 
-  for (i = 0; i < argc && argv[i]; i++) {
+  for (i = 1; i < argc && argv[i]; i++) {
     const char *p = argv[i];
-    if (*p != '-' || streq(p, "-")) break; // no more option args
-    if (streq(p, "--")) { ++i; break; } // end of option args
+    if (*p != '-' || streq(p, "-")) break; /* no more option args */
+    if (streq(p, "--")) { ++i; break; } /* end of option args */
     for (++p; *p; p++) {
       switch (*p) {
         case 'e': *escapes = 1; break;
         case 'n': *newline = 0; break;
-        case 'h': usage(0); break;
+        case 'h': usage(0); exit(SUCCESS); break;
         default: usage("invalid option"); return -1;
       }
     }
   }
 
-  return i; // #args parsed
+  return i; /* #args parsed */
 }
 
 static void
@@ -79,5 +78,6 @@ usage(const char *errmsg)
   if (errmsg) fprintf(fp, "%s: %s\n", me, errmsg);
   fprintf(fp, "Usage: %s [-e] [-n] [arguments...]\n", me);
   fprintf(fp, "Copy arguments to standard output\n");
-  exit(errmsg ? FAILHARD : SUCCESS);
+  fprintf(fp, "Options: -n (omit trailing newline)\n");
+  fprintf(fp, "  -e (enable \\\\ \\a \\b \\e \\f \\n \\r \\t \\v \\0)\n");
 }

@@ -4,52 +4,64 @@
 #include "common.h"
 #include "strbuf.h"
 
-static void include(FILE *fp, int *errcnt);
+static void include(FILE *fp, const char *fn, int level, int *errcnt);
 static bool parseline(const char *s, strbuf *sp);
+
+static int parseopts(int argc, char **argv);
 static void usage(const char *errmsg);
+
+static int maxdepth = 5;
 
 int
 includecmd(int argc, char **argv)
 {
   const char *fn;
   FILE *fp;
-  int errcnt = 0;
+  int r, errcnt = 0;
 
-  SHIFTARGS(argc, argv, 1);
+  r = parseopts(argc, argv);
+  if (r < 0) return FAILHARD;
+  SHIFTARGS(argc, argv, r);
 
-  fn = (argc > 0 && *argv) ? argc--, *argv++ : "-";
-  if (argc > 0 || *argv) usage("expect at most one file");
-  fp = openin(fn);
-  if (!fp) return FAILSOFT;
-
-  include(fp, &errcnt);
+  if (argc <= 0 || !*argv) { /* stdin */
+    include(stdin, "-", 0, &errcnt);
+  }
+  else while (argc > 0 && *argv) { /* all args */
+    fn = *argv++, argc--;
+    fp = openin(fn);
+    if (!fp) return FAILSOFT;
+    include(fp, fn, 0, &errcnt);
+  }
 
   if (ferror(stdout)) {
-    printerr(0);
+    error("error writing output");
     errcnt++;
   }
-  
+
   return errcnt > 0 ? FAILSOFT : SUCCESS;
 }
 
 static void
-include(FILE *fp, int *errcnt)
+include(FILE *fp, const char *fn, int level, int *errcnt)
 {
-  char *line = NULL;
-  size_t len = 0;
+  strbuf linebuf = {0};
+  strbuf namebuf = {0};
   int n;
-  strbuf filename = {0};
 
-  while ((n = getln(&line, &len, fp)) > 0) {
-    if (parseline(line, &filename)) {
-      const char *fn2 = strbuf_ptr(&filename);
+  if (level > maxdepth)
+    fatal("max inclusion depth of %d exceeded", maxdepth);
+
+  while ((n = getline(&linebuf, '\n', fp)) > 0) {
+    const char *line = strbuf_ptr(&linebuf);
+    if (parseline(line, &namebuf)) {
+      const char *fn2 = strbuf_ptr(&namebuf);
       FILE *fp2 = openin(fn2);
       if (fp2) {
-        include(fp2, errcnt);
+        include(fp2, fn2, level+1, errcnt);
         fclose(fp2);
       }
       else {
-        printf("#error %s: %s\n", fn2, strerror(errno));
+        message("#error %s: %s", fn2, strerror(errno));
         *errcnt+=1;
       }
     }
@@ -58,13 +70,17 @@ include(FILE *fp, int *errcnt)
     }
   }
 
-  if (n < 0 || strbuf_failed(&filename)) {
-    printerr(0);
+  if (ferror(fp)) {
+    error("error reading %s", fn);
+    errcnt += 1;
+  }
+  if (strbuf_failed(&namebuf)) {
+    error("out of memory");
     *errcnt+=1;
   }
 
-  if (line) free(line);
-  strbuf_free(&filename);
+  strbuf_free(&linebuf);
+  strbuf_free(&namebuf);
 }
 
 /* parseline: see if this is a #include line, get the file name */
@@ -90,6 +106,28 @@ parseline(const char *line, strbuf *outname)
   return true;
 }
 
+static int
+parseopts(int argc, char **argv)
+{
+  int i, showhelp = 0;
+  for (i = 1; i < argc && argv[i]; i++) {
+    const char *p = argv[i];
+    if (*p != '-' || streq(p, "-")) break; /* no more option args */
+    if (streq(p, "--")) { ++i; break; } /* end of option args */
+    for (++p; *p; p++) {
+      switch (*p) {
+        case 'h': showhelp = 1; break;
+        default: usage("invalid option"); return -1;
+      }
+    }
+  }
+  if (showhelp) {
+    usage(0);
+    exit(SUCCESS);
+  }
+  return i; /* #args parsed */
+}
+
 /* usage: print usage and exit */
 static void
 usage(const char *errmsg)
@@ -98,5 +136,6 @@ usage(const char *errmsg)
   if (errmsg) fprintf(fp, "%s: %s\n", me, errmsg);
   fprintf(fp, "Usage: %s [file]\n", me);
   fprintf(fp, "Include files while copying input to standard output\n");
+  fprintf(fp, "Specify include files as: #include \"filename\"\n");
   exit(errmsg ? FAILHARD : SUCCESS);
 }

@@ -14,23 +14,26 @@ concatcmd(int argc, char **argv)
 
   if (argc < 1 || !*argv) {
     filecopy(stdin, stdout);
-    if (ferror(stdin) || ferror(stdout)) {
-      printerr(0);
+    if (ferror(stdin)) {
+      error("error reading input");
       return FAILSOFT;
     }
-    return SUCCESS;
   }
-
-  while (argc > 0 && *argv) {
+  else while (argc > 0 && *argv) {
     FILE *fp = openin(*argv);
     if (!fp) return FAILSOFT;
     filecopy(fp, stdout);
     fclose(fp);
     if (ferror(fp)) {
-      printerr(*argv);
+      error("error reading %s", *argv);
       return FAILSOFT;
     }
     SHIFTARGS(argc, argv, 1);
+  }
+
+  if (ferror(stdout)) {
+    error("error writing output");
+    return FAILSOFT;
   }
 
   return SUCCESS;

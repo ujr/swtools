@@ -4,12 +4,6 @@
 #include "lines.h"
 #include "common.h"
 
-static void nomem(void)
-{
-  printerr("out of memory");
-  longjmp(errjmp, 1);
-}
-
 #define BUF_ABORT nomem()
 #include "buf.h"
 

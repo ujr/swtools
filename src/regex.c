@@ -130,14 +130,14 @@ int
 amatch(const char *line, int i, const char *pat, int j, int flags)
 {
   /* for each elem in pat:
-  //   if elem is *:
-  //     let n = as many omatch'es as possible
-  //     for i = n downto 0:
-  //       if amatch(rest of lin, rest of pat):
-  //         return success
-  //     return failure
-  //   if not omatch: return failure
-  // return success
+  **   if elem is *:
+  **     let n = as many omatch'es as possible
+  **     for i = n downto 0:
+  **       if amatch(rest of lin, rest of pat):
+  **         return success
+  **     return failure
+  **   if not omatch: return failure
+  ** return success
   */
   int elem, start, k, r;
   while ((elem = pat[j])) {
@@ -194,7 +194,7 @@ omatch(const char *line, int i, const char *pat, int j, int flags)
       return line[i] != '\n' && line[i] != '\0' &&
         !locate(line[i], pat, j+1) ? 1 : -1;
   }
-  printerr("omatch: can't happen");
+  error("omatch: can't happen");
   abort();
 }
 
@@ -228,7 +228,7 @@ patsize(const char *pat, int i)
     case ONEPLUS:
       return CLOSIZE;
   }
-  printerr("patsize: can't happen");
+  error("patsize: can't happen");
   abort();
 }
 

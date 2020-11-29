@@ -76,7 +76,6 @@ quicksort2(int v[], int lo, int hi, int (*cmp)(int,int,void*), void *userdata)
   swap(v, lo, (lo+hi)/2); /* use middle elem as pivot, place in v[lo] */
   last = lo;              /* v[lo..last-1] is the items < pivot */
   for (i = lo+1; i <= hi; i++)
-    //if (v[i] < v[lo])     /* v[i] less than pivot? */
     if (cmp(v[i], v[lo], userdata) < 0) /* v[i] less than pivot? */
       swap(v, ++last, i); /* yes: swap into left subset */
   swap(v, lo, last);      /* restore pivot; we know v[last] <= v[lo] */

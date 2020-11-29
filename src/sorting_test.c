@@ -24,8 +24,8 @@ static int a[] = { 6, 10, 3, 2, 4, 8, 1, 7, 5, 9 };
 static int b[] = { 6, 10, 3, 2, 4, 8, 1, 7, 5, 9 };
 static int c[] = { 6, 10, 3, 2, 4, 8, 1, 7, 5, 9 };
 
-static int r[] = { 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 }; // reverse sorted
-static int z[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }; // sorted order
+static int r[] = { 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 }; /* reverse sorted */
+static int z[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }; /* sorted order */
 
 static int small[] = { 6, 10, 3, 2, 4, 8, 1, 7, 5, 9 };
 static int large[1000] = {

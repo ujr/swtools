@@ -8,7 +8,6 @@
 #include "common.h"
 #include "lines.h"
 
-static void nomem() { longjmp(errjmp, 1); }
 #define BUF_ABORT nomem()
 #include "buf.h"
 
@@ -23,7 +22,7 @@ shufflecmd(int argc, char **argv)
   size_t n;
   long seed = -1;
   int num = -1;
-  struct lines lines = { 0, 0, 0 }; // must zero-init for buf.h
+  struct lines lines = { 0, 0, 0 }; /* must zero-init for buf.h */
 
   r = parseopts(argc, argv, &seed, &num);
   if (r < 0) return FAILHARD;
@@ -112,7 +111,7 @@ parseopts(int argc, char **argv, long *seed, int *num)
           }
           usage("option -n requires a positive number argument");
           return -1;
-        case 's': 
+        case 's':
           if (argv[i+1] && (l = atol(argv[i+1])) >= 0 && !*(p+1)) {
             *seed = l;
             i += 1;

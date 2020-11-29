@@ -47,7 +47,7 @@ findcmd(int argc, char **argv)
       if (!fp) { r = FAILSOFT; continue; }
       dofile(fp, pat, fn);
       if (ferror(fp)) {
-        printerr(argv[i]);
+        error("error reading %s", argv[i]);
         r = FAILSOFT;
       }
       fclose(fp);
@@ -57,7 +57,7 @@ findcmd(int argc, char **argv)
     showname = false;
     dofile(stdin, pat, 0);
     if (ferror(stdin)) {
-      printerr("error reading input");
+      error("error reading input");
       r = FAILSOFT;
     }
   }

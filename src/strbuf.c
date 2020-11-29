@@ -120,7 +120,7 @@ strbuf_ready(strbuf *sp, size_t dlen)
   size_t standard = GROWFUNC(SIZE(sp));
   size_t newsize = MAX(requested, standard);
 
-  newsize = (newsize+1)&~1; // round up to even
+  newsize = (newsize+1)&~1; /* round up to even */
   char *ptr = realloc(sp->buf, newsize);
   if (!ptr) goto nomem;
   memset(ptr + sp->len, 0, newsize - sp->len);

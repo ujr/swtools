@@ -35,12 +35,12 @@ copycmd(int argc, char **argv)
   r = 0;
 
   if (fflush(ofp) == EOF || ferror(ofp)) {
-    printerr("output error");
+    error("error writing output");
     r += 1;
   }
 
   if (ferror(ifp)) {
-    printerr("input error");
+    error("error reading input");
     r += 1;
   }
 
@@ -56,17 +56,17 @@ parseopts(int argc, char **argv)
   int i;
   for (i = 1; i < argc && argv[i]; i++) {
     const char *p = argv[i];
-    if (*p != '-' || streq(p, "-")) break; // no more option args
-    if (streq(p, "--")) { ++i; break; } // end of option args
+    if (*p != '-' || streq(p, "-")) break; /* no more option args */
+    if (streq(p, "--")) { ++i; break; } /* end of option args */
     for (++p; *p; p++) {
       switch (*p) {
-        case 'h': usage(0); break;
+        case 'h': usage(0); exit(SUCCESS); break;
         default: usage("invalid option"); return -1;
       }
     }
   }
 
-  return i; // #args parsed
+  return i; /* #args parsed */
 }
 
 static void
@@ -77,5 +77,4 @@ usage(const char *errmsg)
   fprintf(fp, "Usage: %s [infile [outfile]]\n", me);
   fprintf(fp, "Copy infile (or stdin) to outfile (or stdout)\n");
   fprintf(fp, "The outfile is first created or truncated\n");
-  exit(errmsg ? FAILHARD : SUCCESS);
 }

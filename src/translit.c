@@ -26,7 +26,7 @@ translitcmd(int argc, char **argv)
   r = parseargs(argc, argv, &allbut, &src, &dst);
   if (r < 0) return FAILHARD;
   if (strbuf_failed(&src) || strbuf_failed(&dst)) {
-    printerr("expanding src/dest arguments");
+    error("expanding src/dest arguments");
     return FAILSOFT;
   }
 
@@ -67,8 +67,8 @@ parseargs(int argc, char **argv,
   int i;
   for (i = 1; i < argc && argv[i]; i++) {
     const char *p = argv[i];
-    if (*p != '-' || streq(p, "-")) break; // no more option args
-    if (streq(p, "--")) { ++i; break; } // end of option args
+    if (*p != '-' || streq(p, "-")) break; /* no more option args */
+    if (streq(p, "--")) { ++i; break; } /* end of option args */
     for (++p; *p; p++) {
       switch (*p) {
         case 'c': *allbut = true; break;

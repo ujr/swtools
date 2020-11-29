@@ -54,7 +54,7 @@ printcmd(int argc, char **argv)
   if (argc < 1 || !*argv) {
     filedump(stdin, stdout);
     if (ferror(stdin) || ferror(stdout)) {
-      printerr(0);
+      error("I/O error");
       return FAILSOFT;
     }
     return SUCCESS;
@@ -66,10 +66,15 @@ printcmd(int argc, char **argv)
     filedump(fp, stdout);
     fclose(fp);
     if (ferror(fp)) {
-      printerr(*argv);
+      error("error reading %s", *argv);
       return FAILSOFT;
     }
     SHIFTARGS(argc, argv, 1);
+  }
+
+  if (ferror(stdout)) {
+    error("error writing output");
+    return FAILSOFT;
   }
 
   return SUCCESS;

@@ -33,11 +33,10 @@ struct {
   { 0, 0 }
 };
 
-const char *me; // for error messages
+const char *me; /* for error messages */
 int verbosity = 0;
 jmp_buf errjmp;
 static const char *progname;
-static const char *toolname;
 
 const char *
 makeident(const char *s, const char *t)
@@ -45,7 +44,7 @@ makeident(const char *s, const char *t)
   size_t ns = s ? strlen(s) : 0;
   size_t nt = t ? strlen(t) : 0;
   char *p = malloc(ns+1+nt+1);
-  if (!p) abort(); // lazyness
+  if (!p) abort();
   if (s) strcpy(p, s);
   if (s && t) p[ns] = ' ';
   if (t) strcpy(p+ns+1, t);
@@ -55,20 +54,20 @@ makeident(const char *s, const char *t)
 static toolfun *
 findtool(const char *name)
 {
-  if (!name) return 0; // no name
+  if (!name) return 0; /* no name */
   for (int i=0; tools[i].name; i++){
     if (streq(name, tools[i].name)){
       return tools[i].fun;
     }
   }
-  return 0; // not found
+  return 0; /* not found */
 }
 
-// Usage: quux [opts] <cmd> [args]
-// Usage: <cmd> [args]
+/* Usage: quux [opts] <cmd> [args] */
+/* Usage: <cmd> [args]             */
 
 static void
-identity()
+identity(void)
 {
   printf("This is %s version %s\n", progname, RELEASE);
 }
@@ -103,25 +102,25 @@ parseopts(int argc, char **argv)
 
   for (i = 0; i < argc && argv[i]; i++) {
     const char *p = argv[i];
-    if (*p != '-' || streq(p, "-")) break; // no more option args
-    if (streq(p, "--")) { ++i; break; } // end of option args
+    if (*p != '-' || streq(p, "-")) break; /* no more option args */
+    if (streq(p, "--")) { ++i; break; }    /* end of option args */
     for (++p; *p; p++) {
       switch (*p) {
         case 'h': showhelp = 1; break;
         case 'v': verbosity += 1; break;
         case 'V': showversion = 1; break;
-        default: usage("invalid option"); return -1;
+        default: usage("invalid option: -%c", *p); return -1;
       }
     }
   }
 
   if (showhelp || showversion) {
-    identity(123);
+    identity();
     if (showhelp) usage(0);
     exit(SUCCESS);
   }
 
-  return i; // #args parsed
+  return i; /* #args parsed */
 }
 
 int
@@ -130,19 +129,17 @@ main(int argc, char **argv)
   toolfun *cmd;
   int r;
 
-  toolname = 0;
   progname = getprog(argv);
   if (!progname) return FAILHARD;
   me = progname;
 
   if (setjmp(errjmp)) {
-    printerr("giving up");
     return FAILSOFT;
   }
 
   cmd = findtool(progname);
   if (cmd) {
-    toolname = me = progname;
+    me = progname;
     return cmd(argc, argv);
   }
 
@@ -151,7 +148,7 @@ main(int argc, char **argv)
   if (r < 0) return FAILHARD;
   SHIFTARGS(argc, argv, r);
 
-  if (!*argv) { // no command specified
+  if (!*argv) { /* no command specified */
     identity();
     usage(0);
     return SUCCESS;
@@ -159,7 +156,6 @@ main(int argc, char **argv)
 
   cmd = findtool(*argv);
   if (cmd) {
-    toolname = *argv;
     me = makeident(progname, *argv);
     r = cmd(argc, argv);
     free((void *) me);

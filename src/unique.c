@@ -77,11 +77,11 @@ done:
 
   r = SUCCESS;
   if (ferror(fin)) {
-    printerr("input");
+    error("error on input");
     r = FAILSOFT;
   }
   if (ferror(fout)) {
-    printerr("output");
+    error("error on output");
     r = FAILSOFT;
   }
 

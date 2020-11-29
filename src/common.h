@@ -53,13 +53,13 @@ void filecopy(FILE *fin, FILE *fout);
 int getline(strbuf *sp, int delim, FILE *fp);
 int getln(char **buf, size_t *len, FILE *fp);
 char *strclone(const char *s);
-void printerr(const char *msg);
 int checkioerr();
 
-void message(const char *fmg, ...); /* write to stdout, append newline */
-void debug(const char *fmt, ...); /* write to stderr, if verbose */
-void error(const char *fmt, ...); /* always write to stderr */
-void fatal(const char *fmt, ...); /* write to stderr and exit */
+void message(const char *fmt, ...); /* write line to stdout */
+void debug(const char *fmt, ...); /* write line to stderr, if verbose */
+void error(const char *fmt, ...); /* always write line to stderr */
+void fatal(const char *fmt, ...); /* write line to stderr and bail out */
+void nomem(void); /* write "out of memory" to stderr and bail out */
 
 /* translit.c */
 
