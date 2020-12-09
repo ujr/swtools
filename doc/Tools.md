@@ -548,22 +548,23 @@ macro processor.
 
 ## Text Editing
 
-The book's chapter 6 is devoted to a text editor
-similar to the standard Unix **ed**(1) editor.
-It is the largest program in the book and can be
-roughly broken into three parts: (1) the buffer,
-upon which (2) the commands operate, and (3) the
-input parsing.
+The book's chapter 6 is devoted to a text editor similar to
+the standard Unix **ed**(1) editor. The editor's design and
+use is explained, in a way similar to the description of the
+standard editor in Appendix 1 of Kernighan and Pike's 1984
+*The Unix Programming Environment*.
+The editor is not like today's screen editors. It is driven
+by commands that may be entered interactively, or read from
+a script file. This makes it a valuable tool, but somewhat
+inconvenient for interactive use, at least when compared to
+today's editors. See the manual page for details.
 
-The editor is not like today's screen editors. It is
-driven by commands that may be entered interactively,
-or read from a script file. This makes it a valuable
-tool, but somewhat inconvenient for interactive use,
-at least when compared to today's editors.
-See the manual page for details.
+The editor is the largest program in the book. It can be
+roughly broken into three parts: (1) the buffer, upon
+which (2) the commands operate, and (3) the input parsing.
 
-The input to the editor is thus a series of commands,
-one per line, each of which looking like
+Input to the editor is a series of commands, one per line,
+each of which looking like
 
 ```text
 line1,line2 command stuff
@@ -573,8 +574,8 @@ where *line1*, *line2* and *stuff* are optional.
 This entails a main loop of the form
 
 ```text
-while getline(linebuf, stdin):
-  get list of line numbers from linebuf
+while getline(cmdline, stdin):
+  get list of line numbers from cmdline
   if status is OK:
     do command
 ```
@@ -682,6 +683,12 @@ x                      // infinite loop!
 define(x, x x)
 x                      // eats all your memory!
 ```
+
+It is instructive to compare with Jon Bentley's M1 macro
+processor (written in AWK) and the still common M4 macro
+processor, which traces its origins to the earlier Fortran
+edition of the *Software Tools* book. See [m1.pdf](m1.pdf)
+and [m4.pdf](m4.pdf) for local copies of the relevant papers.
 
 ## Possible Improvements
 

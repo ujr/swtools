@@ -1,5 +1,8 @@
 # General Notes
 
+These notes are not directly related to the tools,
+but at least of related interest.
+
 ## Compiler Flags
 
 - `-Wall` enable “all” warnings
@@ -210,25 +213,39 @@ Online previewers and even editors exist.
 Besides the book *Software Tools in Pascal*, the following references
 have been consulted in the creation of this project:
 
-[A Tutorial on Portable Makefiles](https://nullprogram.com/blog/2017/08/20/)
-from Chris Wellons's blog (20 Aug 2017); it refers to the [specification for
-make](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/make.html)
-at the Open Group (the POSIX standard).
-
-[The Unlicense (unlicense.org)](https://unlicense.org/) is a simple way
-to dedicate some work to the public domain.
-
-The [POSIX standards](http://pubs.opengroup.org/onlinepubs/9699919799/)
-(IEEE Std 1003.1-2017), volume about *Shell & Utilities*.
-
-Rob Pike, *Notes on Programming in C*, 1989,
-[archived at Lysator](https://www.lysator.liu.se/c/pikestyle.html),
-and [local copy](/doc/PikeStyle.md)
-
 Kernighan and Ritchie, *The C Programming Language*, 2nd edition,
 Prentice Hall 1988, [ISBN 0131103628](https://www.amazon.com/dp/0131103628).
 
 Aho, Kernighan, Weinberger, *The AWK Programming Language*,
 Addison-Wesley 1988, [ISBN 020107981X](https://www.amazon.com/dp/020107981X).
 
+Rob Pike, *Notes on Programming in C*, 1989,
+[archived at Lysator](https://www.lysator.liu.se/c/pikestyle.html),
+and [local copy](/doc/PikeStyle.md).
+
+Kernighan and Pike, *The Unix Programming Environment*,
+Prentice Hall 1984, [ISBN 013937681X](https://www.amazon.com/dp/013937681X).
+
+[A Tutorial on Portable Makefiles](https://nullprogram.com/blog/2017/08/20/)
+from Chris Wellons's blog (20 Aug 2017); it refers to the [specification for
+make](http://pubs.opengroup.org/onlinepubs/9699919799/utilities/make.html)
+at the Open Group (the POSIX standard).
+
+The [POSIX standards](http://pubs.opengroup.org/onlinepubs/9699919799/)
+(IEEE Std 1003.1-2017), volume about *Shell & Utilities*.
+
+*Decoded: GNU Core Utilities* looks in much detail into those utilities:
+<http://www.maizure.org/projects/decoded-gnu-coreutils/index.html>
+
+Kernighan and Ritchie, *The M4 Macro Processor*, 1977,
+[local copy](m4.pdf). References the earlier Fortran edition
+of the *Software Tools* book.
+
+Jon Bentley, *M1: A Micro Macro Processor*, ca. 1990,
+[local copy](m1.pdf). Written in about 100 lines of AWK.
+
 *The Unix Philosophy* at [Wikipedia](https://en.wikipedia.org/wiki/Unix_philosophy).
+
+*The Unlicense* at [unlicense.org](https://unlicense.org/)
+is a simple way to dedicate some work to the public domain.
+The website links to useful resources about copyright and licensing.
