@@ -684,6 +684,31 @@ define(x, x x)
 x                      // eats all your memory!
 ```
 
+Macros with arguments: follow book's code but with some
+changes: (1) array of struct frame instead of parallel
+arrays typestk, plev, callstk; (2) use growable buffers
+instead of fixed-size arrays; (3) rename some functions.
+
+```text
+define(STDOUT,1)
+define(putc,putcf($1,STDOUT))
+putc(x)                        // emits putcf(x,1)
+define(incr, $1:=$1+1)
+incr(x)                        // emits x:=x+1
+define(cat,$1$2$3$4$5$6$7$8$9)
+cat(Foo,Bar,Baz)               // emits FooBarBaz
+define(op,a$1b)
+op, op(), op(+)                // emits ab, ab, a+b
+
+define(def, `define($1,$2)')   // must quote replacement
+def(foo, bar baz)
+foo                            // emits bar baz
+define(x, y)
+define(x, z)                   // defines y (!) to be z
+                               // (x also evals to z, via y)
+define(`x',z)                  // redefines x
+```
+
 It is instructive to compare with Jon Bentley's M1 macro
 processor (written in AWK) and the still common M4 macro
 processor, which traces its origins to the earlier Fortran
@@ -702,6 +727,7 @@ and [m4.pdf](m4.pdf) for local copies of the relevant papers.
 - find, change: word boundary zero-width pat elem
 - edit: limit size of undo stack
 - edit: check consistently for out-of-memory (strbuf)
+- macro: file inclusion
 
 ## Book Chapters and Tools
 

@@ -1,0 +1,92 @@
+.TH MACRO 1 December\ 2020 local
+
+.SH NAME
+macro \- expand string definitions, with arguments
+
+.SH SYNOPSIS
+\fBmacro\fP [files]
+
+.SH DESCRIPTION
+\fBmacro\fP reads its input, looking for macro definitions
+of the form
+.nf
+.RS
+define(ident, string)
+.RE
+.fi
+and writes its output with each subsequent instance of the
+identifier \fIident\fP replaced by the arbitrary sequence
+of characters \fIstring\fP.
+.
+Within a replacement string, any dollar sign \fB$\fP followed
+by a digit is replaced by an argument corresponding to that
+digit. Arguments are written as a parenthesized list of strings
+following an instance of the identifier, e.g.,
+.nf
+.RS
+ident(arg1,arg2,...)
+.RE
+.fi
+So \fB$1\fP is replaced in the replacement string by \fIarg1\fP,
+\fB$2\fP by \fIarg2\fP, and so on; \fB$0\fP is replaced by
+\fIident\fP. Missing arguments are taken as null strings; extra
+arguments are ignored.
+.
+The replacement string in a definition is expanded before
+the definition occurs, except that any sequence of characters
+between a grave \fB`\fP and a balancing apostrophe \fB'\fP is
+taken literally, with the grave and apostrophe removed.
+Thus, it is possible to make an alias for define by writing
+.nf
+.RS
+define(def,`define($1,$2)')
+.RE
+.fi
+
+Additional predefined built-ins are:
+
+\fBifelse\fP(a,b,c,d) is replaced by the string \fIc\fP
+if the string \fIa\fP exactly matches the string \fIb\fP;
+otherwise it is replaced by the string \fId\fP.
+
+\fBexpr\fP(expression) is replaced by the decimal string
+representation of the numeric value of \fIexpression\fP.
+For correct operation, the expression must consist of
+parentheses, integer operands written as decimal digit
+strings, and the operators \fB+\fP, \fB-\fP, \fB*\fP,
+\fB/\fP (integer division), and \fB%\fP (remainder).
+Multiplication and division bind tighter than addition and
+subtraction, but parentheses may be used to alter this order.
+
+\fBsubstr\fP(s,m,n) is replaced by the substring of \fIa\fP
+starting at location \fIm\fP (counting from one) and
+continuing at most \fIn\fP characters. If \fIn\fP is
+omitted, it is taken as a very large number; if \fIm\fP
+is outside the string, the replacement string is null.
+\fIm\fP and \fIn\fP may be expressions suitable for \fBexpr\fP.
+
+\fBlen\fP(s) is replaced by the string representing the
+length of its argument in characters.
+
+\fBchangeq\fP(xy) changes the quote characters to \fIx\fP
+and \fIy\fP. \fBchangeq()\fP changes them back to \fB`\fP
+and \fB'\fP.
+
+Each replacement string is rescanned for further possible
+replacements, permitting multi-level definitions to be
+expanded to final form.
+
+.SH EXAMPLE
+The macro \fBlen\fP could be written in terms of the other
+built-ins as:
+.nf
+.RS
+define(`len',`ifelse($1,,0,`expr(1+len(substr($1,2)))')')
+.RE
+.fi
+
+.SH BUGS
+A recursive definition of the form \fBdefine(x,x)\fP will
+cause an infinite loop. Expression evaluation is fragile.
+There is no unary minus. It is unwise to use parentheses
+as quote characters.

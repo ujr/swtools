@@ -85,3 +85,4 @@ int findcmd(int argc, char **argv);
 int changecmd(int argc, char **argv);
 int editcmd(int argc, char **argv);
 int definecmd(int argc, char **argv);
+int macrocmd(int argc, char **argv);

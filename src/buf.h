@@ -2,11 +2,12 @@
  *
  * Slightly modified from public domain (thank you!)
  * code at https://github.com/skeeto/growable-buf
- * 
+ *
  *   buf_size(v)      return number of elements in buffer (size_t)
  *   buf_capacity(v)  return capacity of buffer (size_t)
  *   buf_push(v, e)   append element e at end of buffer v
  *   buf_pop(v)       remove and return last element from v
+ *   buf_top(v)       pointer to last element from v
  *   buf_peek(v)      return (but don't remove) the last element
  *   buf_clear(v)     clear buffer v (set its size to 0)
  *   buf_grow(v, n)   change buffer capacity by (ptrdiff_t) n elements
@@ -62,6 +63,9 @@ struct buf {
 
 #define buf_pop(v) \
   ((v)[--buf_ptr(v)->size])
+
+#define buf_top(v) \
+  (&(v)[buf_ptr(v)->size-1])
 
 #define buf_peek(v) \
   ((v)[buf_ptr(v)->size-1])

@@ -30,6 +30,7 @@ struct {
   { "change", changecmd },
   { "edit", editcmd },
   { "define", definecmd },
+  { "macro", macrocmd },
   { 0, 0 }
 };
 
