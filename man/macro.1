@@ -45,6 +45,14 @@ define(def,`define($1,$2)')
 
 Additional predefined built-ins are:
 
+\fBdnl\fP removes all input up to and including the next
+newline. Arguments, if any, are discarded. Can serve as
+a \(lqcommand character\(rq.
+
+\fBifdef\fB(name,iftrue,iffalse) emits \fIiftrue\fP if
+the given \fIname\fP is defined, otherwise it emits \fIiffalse\fP.
+If the respective argument is missing, nothing is emitted.
+
 \fBifelse\fP(a,b,c,d) is replaced by the string \fIc\fP
 if the string \fIa\fP exactly matches the string \fIb\fP;
 otherwise it is replaced by the string \fId\fP.

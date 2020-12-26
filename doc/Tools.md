@@ -689,6 +689,19 @@ changes: (1) array of struct frame instead of parallel
 arrays typestk, plev, callstk; (2) use growable buffers
 instead of fixed-size arrays; (3) rename some functions.
 
+How does it work? Copy input to output, token by token.
+If a token is defined, push replacement text to evaluation
+stack and start argument collection. If a replacement or
+argument token is defined, open a new evaluation stack frame.
+Once all arguments have been collected (matching closing paren
+was read), evaluate current stack frame: push replacement text
+back to input, substituting evaluated arguments for each
+occurrence of $*n*.
+If quoted text appears, unquote and push to evaluation stack
+(if in a macro call) or emit to output (otherwise), but do
+not push back to input. This way upon each evaluation, one
+level of quotes (and only one) is removed.
+
 ```text
 define(STDOUT,1)
 define(putc,putcf($1,STDOUT))
@@ -699,6 +712,8 @@ define(cat,$1$2$3$4$5$6$7$8$9)
 cat(Foo,Bar,Baz)               // emits FooBarBaz
 define(op,a$1b)
 op, op(), op(+)                // emits ab, ab, a+b
+define(a,(b,c))
+a                              // emits (b,c) (comma within parens)
 
 define(def, `define($1,$2)')   // must quote replacement
 def(foo, bar baz)
@@ -728,6 +743,8 @@ and [m4.pdf](m4.pdf) for local copies of the relevant papers.
 - edit: limit size of undo stack
 - edit: check consistently for out-of-memory (strbuf)
 - macro: file inclusion
+- macro: hold expansion of name in define(name,stuff),
+  forget(name), ifdef(name, ...)
 
 ## Book Chapters and Tools
 

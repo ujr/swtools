@@ -18,7 +18,7 @@
 #define COMMA    ','
 #define RPAREN   ')'
 
-typedef enum { UNDEF, DEFTYPE, MACTYPE, FORGET, DNL, DUMPSYMS } sttype;
+typedef enum { UNDEF, MACTYPE, DEFINE, FORGET, IFDEF, DNL, DUMPDEFS } sttype;
 
 /* symbol table entry */
 struct ndblock {
@@ -36,8 +36,11 @@ struct frame {
 };
 
 static void expand(FILE *fp);
-static void eval(sttype kind, int argstk[], int i, int j);
-static void dodef(int argstk[], int i, int j);
+static void eval(sttype kind, int i, int j);
+static void dodef(int i, int j);
+static void doundef(int i, int j);
+static void doifdef(int i, int j);
+static void dodnl(void);
 static int gettok(strbuf *sp, FILE *fp);
 static void skipbl(FILE *fp);
 static void unquote(strbuf *bp, FILE *fp);
@@ -86,6 +89,8 @@ static struct frame *callstk = 0; /* macro call stack (buf.h) */
 static int *argstk = 0;        /* indices into evalstk (buf.h) */
 static char *evalstk = 0;      /* macro name, defn, arguments (buf.h) */
 
+#define ARGSTR(k) (&evalstk[argstk[k]])  /* arg string at index k */
+
 static char lquote = '`';
 static char rquote = '\'';
 
@@ -99,10 +104,11 @@ macrocmd(int argc, char **argv)
   SHIFTARGS(argc, argv, r);
 
   hashinit();
-  install("define", 0, DEFTYPE);
+  install("define", 0, DEFINE);
   install("forget", 0, FORGET);
+  install("ifdef", 0, IFDEF);
   install("dnl", 0, DNL);
-  install("dumpsyms", 0, DUMPSYMS);
+  install("dumpdefs", 0, DUMPDEFS);
 
   r = SUCCESS;
   if (argc > 0) while (*argv) {
@@ -113,35 +119,6 @@ macrocmd(int argc, char **argv)
     fclose(fp);
   }
   else expand(stdin);
-
-#if 0
-  while ((c = gettok(&tokbuf, stdin)) != EOF) {
-    token = strbuf_ptr(&tokbuf);
-    if (!isalpha(c))
-      putstr(token);
-    else if ((tt = lookup(token, &defn)) == UNDEF)
-      putstr(token);
-    else switch (tt) {
-      case DEFTYPE:
-        if (getdef(&tokbuf, &defbuf, stdin))
-          install(strbuf_ptr(&tokbuf), strbuf_ptr(&defbuf), MACTYPE);
-        break;
-      case FORGET:
-        if (getnamearg(&tokbuf, stdin))
-          forget(strbuf_ptr(&tokbuf));
-        break;
-      case DNL:
-        do c = gettok(&tokbuf, stdin);
-        while (c != '\n' && c != EOF);
-        break;
-      case DUMPSYMS:
-        dumpsyms();
-        break;
-      default:
-        unputs(defn);  /* push replacement text to unput stack */
-    }
-  }
-#endif
 
   debug("{symbuf size: %ld}", strbuf_len(&symbuf));
 done:
@@ -211,11 +188,10 @@ expand(FILE *fp)
       else { /* end of arg list */
         size_t ap = buf_size(argstk);
         pushnul(); /* terminate last arg string */
-        eval(prec->kind, argstk, prec->argp, ap-1);
+        eval(prec->kind, prec->argp, ap-1);
         /* pop eval stack */
         struct frame rec = popframe();
         size_t ep = argstk[rec.argp];
-        //debug("{pop to ap=%zu ep=%zu}", rec.argp, ep);
         poparg(rec.argp);
         poptoks(ep);
       }
@@ -233,18 +209,25 @@ expand(FILE *fp)
   if (inmac())
     error("unexpected end of input");
 }
-#define PARENLEVEL (buf_top(callstk)->plev)
 
 /* eval: expand args i..j: do built-in or push back defn */
 static void
-eval(sttype kind, int argstk[], int i, int j)
+eval(sttype kind, int i, int j)
 {
-  int t = argstk[i];
   if (verbosity > 1)
     traceeval(kind, argstk, i, j);
-  if (kind == DEFTYPE)
-    dodef(argstk, i, j);
+  if (kind == DEFINE)
+    dodef(i, j);
+  else if (kind == FORGET)
+    doundef(i, j);
+  else if (kind == IFDEF)
+    doifdef(i, j);
+  else if (kind == DNL)
+    dodnl();
+  else if (kind == DUMPDEFS)
+    dumpsyms();
   else {
+    int t = argstk[i];
     int k = t;
     while (evalstk[k] != '\0') k += 1;
     k -= 1;  /* last char of defn */
@@ -254,9 +237,8 @@ eval(sttype kind, int argstk[], int i, int j)
       else {
         int argno = evalstk[k] - '0';
         if (0 <= argno && argno < j-i) {
-          const char *a = &evalstk[argstk[i+argno+1]];
-          debug("{unput $%d=%s, k=%d, t=%d}", argno, a, k, t);
-          unputs(&evalstk[argstk[i+argno+1]]);
+          const char *a = ARGSTR(i+1+argno);
+          unputs(a); /* push back argN in place of $N */
         }
         k -= 1;  /* skip over $ */
       }
@@ -268,20 +250,58 @@ eval(sttype kind, int argstk[], int i, int j)
 }
 
 /* dodef: install definition in table */
-static void
-dodef(int argstk[], int i, int j)
+static void dodef(int i, int j)
 {
   if (j - i > 2) {
-    const char *name = &evalstk[argstk[i+2]];
-    const char *defn = &evalstk[argstk[i+3]];
+    const char *name = ARGSTR(i+2);
+    const char *defn = ARGSTR(i+3);
     debug("{define %s=%s}", name, defn);
     install(name, defn, MACTYPE);
   }
+  else error("%s: too few arguments", ARGSTR(i+1));
+}
+
+/* doundef: forget macro definition */
+static void doundef(int i, int j)
+{
+  if (j - i > 1) {
+    const char *name = ARGSTR(i+2);
+    debug("{forget %s}", name);
+    forget(name);
+  }
+  else error("%s: too few arguments", ARGSTR(i+1));
+}
+
+/* doifdef: expand $2 if $1 is defined, otherwise $3 */
+static void doifdef(int i, int j)
+{
+  const char *text;
+  if (j - i > 1) {
+    const char *name = ARGSTR(i+2);
+    sttype tt = lookup(name, &text);
+    if (tt == UNDEF) {
+      text = (j-i > 3) ? ARGSTR(i+4) : "";
+    }
+    else {
+      text = (j-i > 2) ? ARGSTR(i+3) : "";
+    }
+    /* silently emit nothing if the respective arg is missing */
+    debug("{ifdef %s (%s): %s}", name, tt == UNDEF ? "false" : "true", text);
+    unputs(text);
+  }
+  else error("%s: too few arguments", ARGSTR(i+1));
+}
+
+/* dodnl: delete characters up to and including next newline */
+static void dodnl(void)
+{
+  int c;
+  do c = gettok(&tokbuf, stdin);
+  while (c != '\n' && c != EOF);
 }
 
 /* unquote: strip quotes and put on output or eval stack */
-static void
-unquote(strbuf *bp, FILE *fp)
+static void unquote(strbuf *bp, FILE *fp)
 {
   int level = 1;
   do {
@@ -298,8 +318,7 @@ unquote(strbuf *bp, FILE *fp)
 }
 
 /* gettok: read alnum sequence or a single non-alnum */
-static int
-gettok(strbuf *sp, FILE *fp)
+static int gettok(strbuf *sp, FILE *fp)
 {
   int c = getpbc(fp);
   if (c == EOF) return EOF;
@@ -316,8 +335,8 @@ gettok(strbuf *sp, FILE *fp)
   return c; /* single non-alnum char */
 }
 
-static void
-skipbl(FILE *fp)
+/* skipbl: skip over blanks and tabs */
+static void skipbl(FILE *fp)
 {
   char c;
   do c = getpbc(fp);
@@ -390,7 +409,7 @@ traceeval(sttype kind, int argstk[], int i, int j) {
   int k;
   fprintf(stderr, "eval(kind=%d,i=%d,j=%d):\n", kind, i, j);
   for (k = j; k >= i; k--) {
-    fprintf(stderr, "%2d:%s$\n", k, &evalstk[argstk[k]]);
+    fprintf(stderr, "%2d:%s$\n", k, ARGSTR(k));
   }
 }
 
