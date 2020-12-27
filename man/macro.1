@@ -49,7 +49,7 @@ Additional predefined built-ins are:
 newline. Arguments, if any, are discarded. Can serve as
 a \(lqcommand character\(rq.
 
-\fBifdef\fB(name,iftrue,iffalse) emits \fIiftrue\fP if
+\fBifdef\fP(name,iftrue,iffalse) emits \fIiftrue\fP if
 the given \fIname\fP is defined, otherwise it emits \fIiffalse\fP.
 If the respective argument is missing, nothing is emitted.
 
@@ -66,8 +66,8 @@ strings, and the operators \fB+\fP, \fB-\fP, \fB*\fP,
 Multiplication and division bind tighter than addition and
 subtraction, but parentheses may be used to alter this order.
 
-\fBsubstr\fP(s,m,n) is replaced by the substring of \fIa\fP
-starting at location \fIm\fP (counting from one) and
+\fBsubstr\fP(s,m,n) is replaced by the substring of \fIs\fP
+starting at location \fIm\fP (counting from zero) and
 continuing at most \fIn\fP characters. If \fIn\fP is
 omitted, it is taken as a very large number; if \fIm\fP
 is outside the string, the replacement string is null.
@@ -79,6 +79,9 @@ length of its argument in characters.
 \fBchangeq\fP(xy) changes the quote characters to \fIx\fP
 and \fIy\fP. \fBchangeq()\fP changes them back to \fB`\fP
 and \fB'\fP.
+
+\fBdumpdefs\fP dumps all definitions to standard error
+if verbosity is at least one.
 
 Each replacement string is rescanned for further possible
 replacements, permitting multi-level definitions to be
@@ -96,5 +99,4 @@ define(`len',`ifelse($1,,0,`expr(1+len(substr($1,2)))')')
 .SH BUGS
 A recursive definition of the form \fBdefine(x,x)\fP will
 cause an infinite loop. Expression evaluation is fragile.
-There is no unary minus. It is unwise to use parentheses
-as quote characters.
+It is unwise to use parentheses as quote characters.

@@ -6,10 +6,10 @@ Brian W. Kernighan and P. J. Plauger,
 
 Tools in the book but not implemented here:
 *overstrike*, *compress*, *expand*, *archive*,
-*kwic* and *unrotate*
+*kwic* and *unrotate*, *format*.
 
 Tools implemented here but not in the book:
-*shuffle*
+*shuffle*.
 
 ## Good Programs
 
@@ -722,7 +722,16 @@ define(x, y)
 define(x, z)                   // defines y (!) to be z
                                // (x also evals to z, via y)
 define(`x',z)                  // redefines x
+
+define(sqr, $1*$1)             // careful about precedence:
+sqr(x+1)                       // use parens or get x+1*x+1
+
+define(length,`ifelse($1,,0,`expr(1+len(substr($1,1)))')')
+define(reverse,`ifelse($1,,,`reverse(substr($1,1)) substr($1,0,1)')')
 ```
+
+The **expr** built-in is implemented by a simple
+*recursive descent* parser and evaluator.
 
 It is instructive to compare with Jon Bentley's M1 macro
 processor (written in AWK) and the still common M4 macro
@@ -742,7 +751,7 @@ and [m4.pdf](m4.pdf) for local copies of the relevant papers.
 - find, change: word boundary zero-width pat elem
 - edit: limit size of undo stack
 - edit: check consistently for out-of-memory (strbuf)
-- macro: file inclusion
+- macro: file inclusion (exercise 8-29)
 - macro: hold expansion of name in define(name,stuff),
   forget(name), ifdef(name, ...)
 

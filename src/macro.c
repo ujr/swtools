@@ -17,8 +17,13 @@
 #define LPAREN   '('
 #define COMMA    ','
 #define RPAREN   ')'
+#define LQUOTE   '`'
+#define RQUOTE   '\''
 
-typedef enum { UNDEF, MACTYPE, DEFINE, FORGET, IFDEF, DNL, DUMPDEFS } sttype;
+typedef enum {
+  UNDEF, MACTYPE, DEFINE, FORGET, IFDEF, IFELSE,
+  EXPR, LEN, SUBSTR, DNL, CHANGEQ, DUMPDEFS
+} sttype;
 
 /* symbol table entry */
 struct ndblock {
@@ -40,13 +45,25 @@ static void eval(sttype kind, int i, int j);
 static void dodef(int i, int j);
 static void doundef(int i, int j);
 static void doifdef(int i, int j);
+static void doifelse(int i, int j);
+static void doexpr(int i, int j);
+static void dolen(int i, int );
+static void dosub(int i, int j);
 static void dodnl(void);
+static void dochq(int i, int j);
 static int gettok(strbuf *sp, FILE *fp);
 static void skipbl(FILE *fp);
 static void unquote(strbuf *bp, FILE *fp);
 /* TODO possible opts: hashsize, recursion/iteration limit */
 static int parseopts(int argc, char **argv);
 static void usage(const char *errmsg);
+
+/* Expression evaluation */
+
+static char peek(const char *s, size_t *pi);
+static int factor(const char *s, size_t *pi);
+static int term(const char *s, size_t *pi);
+static int expr(const char *s, size_t *pi);
 
 /* Evaluation Stack */
 
@@ -91,8 +108,8 @@ static char *evalstk = 0;      /* macro name, defn, arguments (buf.h) */
 
 #define ARGSTR(k) (&evalstk[argstk[k]])  /* arg string at index k */
 
-static char lquote = '`';
-static char rquote = '\'';
+static char lquote = LQUOTE;
+static char rquote = RQUOTE;
 
 int
 macrocmd(int argc, char **argv)
@@ -107,7 +124,12 @@ macrocmd(int argc, char **argv)
   install("define", 0, DEFINE);
   install("forget", 0, FORGET);
   install("ifdef", 0, IFDEF);
+  install("ifelse", 0, IFELSE);
+  install("expr", 0, EXPR);
+  install("len", 0, LEN);
+  install("substr", 0, SUBSTR);
   install("dnl", 0, DNL);
+  install("changeq", 0, CHANGEQ);
   install("dumpdefs", 0, DUMPDEFS);
 
   r = SUCCESS;
@@ -222,8 +244,18 @@ eval(sttype kind, int i, int j)
     doundef(i, j);
   else if (kind == IFDEF)
     doifdef(i, j);
+  else if (kind == IFELSE)
+    doifelse(i, j);
+  else if (kind == EXPR)
+    doexpr(i, j);
+  else if (kind == LEN)
+    dolen(i, j);
+  else if (kind == SUBSTR)
+    dosub(i, j);
   else if (kind == DNL)
     dodnl();
+  else if (kind == CHANGEQ)
+    dochq(i, j);
   else if (kind == DUMPDEFS)
     dumpsyms();
   else {
@@ -249,7 +281,7 @@ eval(sttype kind, int i, int j)
   }
 }
 
-/* dodef: install definition in table */
+/* dodef: define(name,defn): install definition in table */
 static void dodef(int i, int j)
 {
   if (j - i > 2) {
@@ -261,7 +293,7 @@ static void dodef(int i, int j)
   else error("%s: too few arguments", ARGSTR(i+1));
 }
 
-/* doundef: forget macro definition */
+/* doundef: forget(name): forget macro definition */
 static void doundef(int i, int j)
 {
   if (j - i > 1) {
@@ -272,11 +304,11 @@ static void doundef(int i, int j)
   else error("%s: too few arguments", ARGSTR(i+1));
 }
 
-/* doifdef: expand $2 if $1 is defined, otherwise $3 */
+/* doifdef: ifdef(name,ifyes,ifno): expand ifyes or ifno */
 static void doifdef(int i, int j)
 {
-  const char *text;
   if (j - i > 1) {
+    const char *text;
     const char *name = ARGSTR(i+2);
     sttype tt = lookup(name, &text);
     if (tt == UNDEF) {
@@ -292,12 +324,114 @@ static void doifdef(int i, int j)
   else error("%s: too few arguments", ARGSTR(i+1));
 }
 
+/* doifelse: ifelse(a,b,ifsame,ifnot): expand ifsame or ifnot */
+static void doifelse(int i, int j)
+{
+  if (j - i > 2) {
+    const char *text;
+    const char *a = ARGSTR(i+2);
+    const char *b = ARGSTR(i+3);
+    bool iseq = streq(a, b);
+    if (iseq) {
+      text = (j-i > 3) ? ARGSTR(i+4) : "";
+    }
+    else {
+      text = (j-i > 4) ? ARGSTR(i+5) : "";
+    }
+    /* silently emit nothing if the respective arg is missing */
+    debug("{ifelse %s=%s (%s): %s}", a, b, iseq?"true":"false", text);
+    unputs(text);
+  }
+  else error("%s: too few arguments", ARGSTR(i+1));
+}
+
+/* doexpr: expr(text): evaluate arithmetic expression */
+static void doexpr(int i, int j)
+{
+  int nargs = j - i + 1 - 2;
+  if (nargs > 0) {
+    char buf[32];
+    const char *s = ARGSTR(i+2);
+    size_t i = 0;
+    int val = expr(s, &i);
+    snprintf(buf, sizeof buf, "%d", val);
+    debug("{expr %s: %s}", s, buf);
+    unputs(buf);
+  }
+  else error("%s: too few arguments", ARGSTR(i+1));
+}
+
+/* dolen: len(s): emit length of argument */
+static void dolen(int i, int j)
+{
+  if (j - i >= 2) {
+    char buf[32];
+    const char *s = ARGSTR(i+2);
+    size_t len = strlen(s);
+    snprintf(buf, sizeof buf, "%zu", len);
+    debug("{len %s: %s}", s, buf);
+    unputs(buf);
+  }
+}
+
+/* dosub: substr(s,m,n): emit substring of argument */
+static void dosub(int i, int j)
+{
+  int k, nargs = j - i + 1 - 2;
+  const char *s = nargs >= 1 ? ARGSTR(i+2) : "";
+  const char *m = nargs >= 2 ? ARGSTR(i+3) : 0;
+  const char *n = nargs >= 3 ? ARGSTR(i+4) : 0;
+  int len = strlen(s);
+  size_t im = 0, in = 0;
+  int mm = m ? expr(m, &im) : 0;
+  int nn = n ? expr(n, &in) : len;
+  if (mm < 0) mm = 0;
+  else if (mm > len) mm = len;
+  if (nn < 0) nn = 0;
+  else if (nn > len - mm) nn = len - mm;
+  debug("{substr s=%s, m=%d, n=%d}", s, mm, nn);
+  for (k = mm + nn - 1; k >= mm; k--)
+    unputc(s[k]);
+}
+
 /* dodnl: delete characters up to and including next newline */
 static void dodnl(void)
 {
   int c;
   do c = gettok(&tokbuf, stdin);
   while (c != '\n' && c != EOF);
+}
+
+/* dochq: change quote characters */
+static void dochq(int i, int j)
+{
+  int nargs = j - i + 1 - 2; /* i+0: defn, +1: name, +2: arg1, etc. */
+  if (nargs == 0) { /* will not occur */
+    lquote = LQUOTE;
+    rquote = RQUOTE;
+  }
+  else if (nargs == 1) { /* changeq(lr) */
+    const char *s = ARGSTR(i+2);
+    size_t len = strlen(s);
+    if (len == 0) { /* restore */
+      lquote = LQUOTE;
+      rquote = RQUOTE;
+    }
+    else if (len == 1) {
+      lquote = rquote = s[0];
+    }
+    else {
+      lquote = s[0];
+      rquote = s[1];
+    }
+  }
+  else if (nargs >= 2) { /* changeq(l,r) */
+    const char *l = ARGSTR(i+2);
+    const char *r = ARGSTR(i+3);
+    lquote = l[0] ? l[0] : LQUOTE;
+    rquote = r[0] ? r[0] : RQUOTE;
+  }
+  debug("{changeq: %c %c}", lquote, rquote);
 }
 
 /* unquote: strip quotes and put on output or eval stack */
@@ -344,6 +478,73 @@ static void skipbl(FILE *fp)
   unputc(c); /* went one too far */
 }
 
+/** Expression Evaluation **/
+
+/* Grammar:
+    expr:   term (+|-) term
+    term:   factor (*|/|%) factor
+    factor: number | ( expr )
+*/
+
+static int expr(const char *s, size_t *pi)
+{
+  int v = term(s, pi);
+  char c = peek(s, pi);
+  while (c == '+' || c == '-') {
+    *pi += 1;  /* skip operator */
+    if (c == '+')
+      v += term(s, pi);
+    else
+      v -= term(s, pi);
+    c = peek(s, pi);
+  }
+  return v;
+}
+
+static int term(const char *s, size_t *pi)
+{
+  int w, v = factor(s, pi);
+  char c = peek(s, pi);
+  while (c == '*' || c == '/' || c == '%') {
+    *pi += 1;  /* skip operator */
+    w = factor(s, pi);
+    if (c == '*') v *= w;
+    else {
+      if (w == 0)
+        error("division by zero");
+      else if (c == '/') v /= w;
+      else v %= w;
+    }
+    c = peek(s, pi);
+  }
+  return v;
+}
+
+static int factor(const char *s, size_t *pi)
+{
+  int v = 0;
+  if (peek(s, pi) == LPAREN) {
+    *pi += 1;  /* skip paren */
+    v = expr(s, pi);
+    if (peek(s, pi) != RPAREN)
+      error("missing right paren in expr");
+    *pi += 1;  /* skip paren */
+  }
+  else {
+    size_t n = scanint(s + *pi, &v);
+    if (n) *pi += n;
+    else error("expecting a number in expr");
+  }
+  return v;
+}
+
+/* peek: skip over white space, return next char */
+static char peek(const char *s, size_t *pi)
+{
+  while (isspace(s[*pi])) *pi += 1;
+  return s[*pi];
+}
+
 /** Evaluation Stack **/
 
 static void pushframe(int tt, int plev, size_t ap) {
@@ -378,7 +579,6 @@ static void pushnul(void) {
 static void poptoks(size_t ep) {
   while (buf_size(evalstk) > ep)
     (void) buf_pop(evalstk);
-  //dumpstack();
 }
 
 static void pusharg(void) {
@@ -390,19 +590,6 @@ static void poparg(size_t ap) {
   while (buf_size(argstk) > ap)
     (void) buf_pop(argstk);
 }
-
-#if 0
-static void dumpstack(void) {
-  size_t n;
-  fprintf(stderr, "Eval stack (cp=%zu, ap=%zu, ep=%zu):\n",
-          buf_size(callstk), buf_size(argstk), buf_size(evalstk));
-  n = buf_size(argstk);
-  while (n > 0) {
-    n -= 1;
-    fprintf(stderr, "%2zd:%s$\n", n, &evalstk[argstk[n]]);
-  }
-}
-#endif
 
 static void
 traceeval(sttype kind, int argstk[], int i, int j) {
