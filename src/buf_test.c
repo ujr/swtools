@@ -1,14 +1,14 @@
-/* Unit tests for buf.h
+/* Unit tests for buf.h header library
  *
- * Taken from public domain (thank you!) code
- * at https://github.com/skeeto/growable-buf
+ * Slightly modified from public domain (thank you!)
+ * code at https://github.com/skeeto/growable-buf
  */
+
+#include "test.h"
 
 #include <stdio.h>
 #include <stdint.h>
 #include <setjmp.h>
-
-#include "test.h"
 
 static jmp_buf escape;
 
@@ -62,12 +62,12 @@ buf_test(int *pnumpass, int *pnumfail)
   TEST("match 10000", match == 10000);
   buf_free(ai);
 
-  /* buf_grow(), buf_trunc() */
+  /* buf_grow(), buf_trim() */
   buf_grow(ai, 1000);
   TEST("grow 1000", buf_capacity(ai) == 1000);
   TEST("size 0 (grow)", buf_size(ai) == 0);
-  buf_trunc(ai, 100);
-  TEST("trunc 100", buf_capacity(ai) == 100);
+  buf_trim(ai, 100);
+  TEST("trim 100", buf_capacity(ai) == 100);
   buf_free(ai);
 
   /* buf_pop(), buf_peek() */
@@ -79,13 +79,24 @@ buf_test(int *pnumpass, int *pnumfail)
   TEST("size 4", buf_size(a) == 4);
   TEST("pop 3", buf_pop(a) == (float) 1.4f);
   TEST("peek 3", buf_peek(a) == (float) 1.3f);
-  buf_trunc(a, 3);
+  buf_trim(a, 3);
   TEST("size 3", buf_size(a) == 3);
   TEST("pop 2", buf_pop(a) == (float) 1.3f);
   TEST("pop 1", buf_pop(a) == (float) 1.2f);
   TEST("pop 0", buf_pop(a) == (float) 1.1f);
   TEST("size 0 (pop)", buf_size(a) == 0);
   buf_free(a);
+
+  /* buf_top(), buf_trunc() */
+  buf_trunc(a, 0);
+  buf_push(a, 12.3);
+  buf_push(a, 23.4);
+  buf_push(a, 34.5);
+  float *pf = buf_top(a);
+  TEST("top ptr", pf != 0 && *pf == 34.5);
+  buf_trunc(a, 99); /* no-op */
+  buf_trunc(a, 2);
+  TEST("trunc", buf_size(a) == 2 && buf_peek(a) == (float) 23.4f);
 
   /* Memory allocation failures */
 
@@ -109,7 +120,7 @@ buf_test(int *pnumpass, int *pnumfail)
     int *volatile p = 0;
     aborted = 0;
     if (!setjmp(escape)) {
-      buf_trunc(p, PTRDIFF_MAX);
+      buf_trim(p, PTRDIFF_MAX);
     } else {
       aborted = 1;
     }
@@ -121,8 +132,8 @@ buf_test(int *pnumpass, int *pnumfail)
     int *volatile p = 0;
     aborted = 0;
     if (!setjmp(escape)) {
-      buf_trunc(p, 1);  /* force realloc() use next */
-      buf_trunc(p, PTRDIFF_MAX);
+      buf_trim(p, 1);  /* force realloc() use next */
+      buf_trim(p, PTRDIFF_MAX);
     } else {
       aborted = 1;
     }
