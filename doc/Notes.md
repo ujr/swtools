@@ -196,17 +196,32 @@ Note that a non-priviledged process cannot raise limits!
 
 ## Markdown
 
-Markdown is a plain text formatting syntax widely used
-for README files and the like. The idea is that you write
-plain text following a very few syntax rules, and then
-a software tool will convert it to nicely looking HTML
-(from markdown to markup). GitHub recognises a few extra
-features, known as “GitHub Flavored Markdown” (or GFM).
-Online previewers and even editors exist.
+Markdown is a plain text formatting convention widely
+used for README files and the like. The idea is to write
+plain text following a few unobtrusive syntax rules, and
+then a software tool will convert it to HTML (“markdown
+to markup”). The main virtue is that the plain text looks
+natural and very readable. Markdown was devised by John
+Gruber. He provided a Perl tool to convert Markdown to HTML,
+but he did not provide an unambiguous specification. This
+gap is filled by the CommonMark specification, which also
+provides a test suite to validate Markdown implementations.
+GitHub recognises a few extra features, known as “GitHub
+Flavored Markdown” (or GFM). Many text editors support
+Markdown by providing from syntax highlighting to previewing
+to linting. Online previewers and even editors exist as well.
 
 - <https://daringfireball.net/projects/markdown/>
+- <https://commonmark.org/>
 - <https://github.github.com/gfm/>
 - <https://jbt.github.io/markdown-editor/>
+- <https://fossil-scm.org/home/md_rules>
+
+Side note: [pikchr](https://pikchr.org/) is an implementation
+of the [PIC language](https://en.wikipedia.org/wiki/Pic_language)
+for simple (technical) pictures. The Fossil SCM automatically
+renders them to SVG when they appear in fenced code blocks of
+Markdown. Looking forward to seeing wider support.
 
 ## References
 

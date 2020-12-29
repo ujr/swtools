@@ -1,15 +1,7 @@
 # Software Tools
 
-Inspired and largely taken from:
-Brian W. Kernighan and P. J. Plauger,
-*Software Tools in Pascal*, Addison-Wesley, 1981.
-
-Tools in the book but not implemented here:
-*overstrike*, *compress*, *expand*, *archive*,
-*kwic* and *unrotate*, *format*.
-
-Tools implemented here but not in the book:
-*shuffle*.
+My path through the book *Software Tools in Pascal* by
+Brian W. Kernighan and P. J. Plauger, Addison-Wesley, 1981.
 
 ## Good Programs
 
@@ -92,10 +84,9 @@ of primitives. The authors of *Software Tools in Pascal*
 had no such standard library available and started their
 own set of primitives with the functions *getc* and *putc*
 to read and write characters from and to some 'standard'
-input and output file. Because the names *getc* and *putc*
-are part of the C Standard Library, my implementation will
-call them *getch* and *putch* and define them as macros
-that translate to the standard C functions.
+input and output file. Notes on the book primitives and
+their mapping to the C standard library is in the separate
+[Primitives.md](Primitives.md) document.
 
 ## File Copying
 
@@ -739,7 +730,30 @@ processor, which traces its origins to the earlier Fortran
 edition of the *Software Tools* book. See [m1.pdf](m1.pdf)
 and [m4.pdf](m4.pdf) for local copies of the relevant papers.
 
-## Possible Improvements
+## The End
+
+The book ends with the macro processor, making for a
+remarkably complete toolset. To review by book chapter:
+
+1. Getting Started: *copy*, *count*, *detab*
+2. Filters: *entab*, *overstrike*, *compress*, *expand*,
+   *echo*, *translit*
+3. Files: *compare*, *include*, *concat*, *print*, *makecopy*, *archive*
+4. Sorting: *sort*, *unique*, *common*, *kwic*, *unrotate*
+5. Text Patterns: *find*, *change*
+6. Editing: *edit*
+7. Formatting: *format*
+8. Macro Processing: *define*, *macro*
+
+Tools in the book but not implemented here:
+*overstrike*, *compress*, *expand*, *archive*,
+*kwic* and *unrotate*, *format*.
+Tools implemented here but not in the book: *shuffle*.
+
+The only thing that is really missing is a simple shell
+and maybe an equivalent for the Unix *find* command, which
+looks for files. There is also a lot of room for improvement
+of the tools (and certainly my re-implementation):
 
 - count: an option to count UTF-8 characters
 - include: relative to current file, not working dir
@@ -753,16 +767,15 @@ and [m4.pdf](m4.pdf) for local copies of the relevant papers.
 - edit: check consistently for out-of-memory (strbuf)
 - macro: file inclusion (exercise 8-29)
 - macro: hold expansion of name in define(name,stuff),
-  forget(name), ifdef(name, ...)
+  forget(name), ifdef(name, ...) – would add to usability,
+  but that is my personal opinion.
 
-## Book Chapters and Tools
+On the other hand, all tools presented in the book also
+exist in any Unix system today, some using different names.
+Therefore in real life, you would probably want to stick to
+the [GNU tools][coreutils] or use [BusyBox][busybox] or
+a similar set of proven tools and use the book to gain
+insight into and appreciation of those tools.
 
-1. Getting Started: *copy*, *count*, *detab*
-2. Filters: *entab*, *overstrike*, *compress*, *expand*,
-   *echo*, *translit*
-3. Files: *compare*, *include*, *concat*, *print*, *makecopy*, *archive*
-4. Sorting: *sort*, *unique*, (common), *kwic*, *unrotate*
-5. Text Patterns: *find*, *change*
-6. Editing: *edit*
-7. Formatting: *format*
-8. Macro Processing: *define*, *macro*
+[busybox]: https://busybox.net/
+[coreutils]: https://www.gnu.org/software/coreutils/
