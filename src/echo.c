@@ -1,3 +1,4 @@
+/* echo - copy arguments to stdout */
 
 #include "common.h"
 

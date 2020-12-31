@@ -1,3 +1,4 @@
+/* detab - convert tabs to blanks */
 
 #include "common.h"
 

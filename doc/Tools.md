@@ -657,7 +657,7 @@ while gettok(token) != ENDFILE:
 ```text
 define(d, define)
 d(a,b)
-d                      // expands to b
+a                      // expands to b
 
 define(define, x)
 define(a,b)            // expands to x(a,b)
@@ -764,7 +764,6 @@ of the tools (and certainly my re-implementation):
   (for upper, lower, alnum, etc.)
 - find, change: word boundary zero-width pat elem
 - edit: limit size of undo stack
-- edit: check consistently for out-of-memory (strbuf)
 - macro: file inclusion (exercise 8-29)
 - macro: hold expansion of name in define(name,stuff),
   forget(name), ifdef(name, ...) – would add to usability,

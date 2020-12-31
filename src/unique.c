@@ -1,3 +1,4 @@
+/* unique - delete adjacent duplicate lines */
 
 #include <assert.h>
 #include <stdbool.h>
@@ -7,7 +8,7 @@
 #include "common.h"
 #include "strbuf.h"
 
-static int unique(FILE *fin, bool count, FILE *fout);
+static int unique(FILE *fin, bool count);
 static bool equal(strbuf *sp1, strbuf *sp2);
 static int parseargs(int argc, char **argv, bool *count);
 static void usage(const char *msg);
@@ -36,7 +37,7 @@ uniquecmd(int argc, char **argv)
     goto done;
   }
 
-  r = unique(fp, count, stdout);
+  r = unique(fp, count);
 
 done:
   if (fp != stdin)
@@ -46,7 +47,7 @@ done:
 }
 
 static int
-unique(FILE *fin, bool count, FILE *fout)
+unique(FILE *fin, bool count)
 {
   strbuf sb0 = {0}, *sp0 = &sb0;
   strbuf sb1 = {0}, *sp1 = &sb1;
@@ -61,15 +62,15 @@ unique(FILE *fin, bool count, FILE *fout)
     if (equal(sp0, sp1)) num += 1;
     else {
       strbuf *temp;
-      if (count) fprintf(fout, "%zd\t", num);
-      fputs(strbuf_ptr(sp0), fout);
+      if (count) printf("%zd\t", num);
+      putstr(strbuf_ptr(sp0));
       temp = sp0; sp0 = sp1; sp1 = temp;
       num = 1;
     }
   }
 
-  if (count) fprintf(fout, "%zd\t", num);
-  fputs(strbuf_ptr(sp0), fout);
+  if (count) printf("%zd\t", num);
+  putstr(strbuf_ptr(sp0));
 
 done:
   strbuf_free(sp0);
@@ -80,7 +81,7 @@ done:
     error("error on input");
     r = FAILSOFT;
   }
-  if (ferror(fout)) {
+  if (ferror(stdout)) {
     error("error on output");
     r = FAILSOFT;
   }

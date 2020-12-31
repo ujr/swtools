@@ -1,3 +1,4 @@
+/* compare - compare text files for equality */
 
 #include <ctype.h>
 #include <stdarg.h>
@@ -7,11 +8,11 @@
 #include "common.h"
 #include "strbuf.h"
 
-static int parseopts(int argc, char **argv, bool *quiet);
-static void usage(const char *errfmt, ...);
 static bool equal(const char *line1, const char *line2);
 static void diffmsg(int lineno, const char *line1, const char *line2);
 static void dumpline(const char *line, FILE *fp);
+static int parseopts(int argc, char **argv, bool *quiet);
+static void usage(const char *errmsg);
 
 int
 comparecmd(int argc, char **argv)
@@ -81,32 +82,6 @@ comparecmd(int argc, char **argv)
   return 1;  /* files differ */
 }
 
-static int
-parseopts(int argc, char **argv, bool *quiet)
-{
-  int i, showhelp = 0;
-
-  for (i = 1; i < argc && argv[i]; i++) {
-    const char *p = argv[i];
-    if (*p != '-' || streq(p, "-")) break; /* no more option args */
-    if (streq(p, "--")) { ++i; break; } /* end of option args */
-    for (++p; *p; p++) {
-      switch (*p) {
-        case 'q': *quiet = true; break;
-        case 'h': showhelp = 1; break;
-        default: usage("invalid option: '%c'", *p); return -1;
-      }
-    }
-  }
-
-  if (showhelp) {
-    usage(0);
-    exit(SUCCESS);
-  }
-
-  return i; /* #args parsed */
-}
-
 /* equal: compare line1 and line2, return 1 if equal */
 static bool
 equal(const char *line1, const char *line2)
@@ -146,21 +121,36 @@ dumpline(const char *line, FILE *fp)
   putc('\n', fp);
 }
 
-static void
-usage(const char *errfmt, ...)
+static int
+parseopts(int argc, char **argv, bool *quiet)
 {
-  char errmsg[256];
-  va_list ap;
-  FILE *fp = errfmt ? stderr : stdout;
-  if (errfmt) {
-    va_start(ap, errfmt);
-    vsnprintf(errmsg, sizeof(errmsg), errfmt, ap);
-    fprintf(fp, "%s: %s\n", me, errmsg);
-    va_end(ap);
+  int i, showhelp = 0;
+  for (i = 1; i < argc && argv[i]; i++) {
+    const char *p = argv[i];
+    if (*p != '-' || streq(p, "-")) break; /* no more option args */
+    if (streq(p, "--")) { ++i; break; } /* end of option args */
+    for (++p; *p; p++) {
+      switch (*p) {
+        case 'q': *quiet = true; break;
+        case 'h': showhelp = 1; break;
+        default: usage("invalid option");
+          return -1;
+      }
+    }
   }
-  fprintf(fp, "Usage: %s [-q] file1 [file2]\n", me);
-  fprintf(fp, "Compare files line-by-line\n");
-  fprintf(fp, "Options: -q  quiet (do not report differing lines)\n");
-  exit(errfmt ? FAILHARD : SUCCESS);
+  if (showhelp) {
+    usage(0);
+    exit(SUCCESS);
+  }
+  return i; /* #args parsed */
 }
 
+static void
+usage(const char *errmsg)
+{
+  FILE *fp = errmsg ? stderr : stdout;
+  if (errmsg) fprintf(fp, "%s: %s\n", me, errmsg);
+  fprintf(fp, "Usage: %s [-q] file1 [file2]\n", me);
+  fprintf(fp, "Compare files line-by-line; file2 defaults to stdin.\n");
+  fprintf(fp, "Options: -q  quiet (do not report differing lines)\n");
+}

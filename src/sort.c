@@ -1,3 +1,4 @@
+/* sort - sort text lines */
 
 #include <assert.h>
 #include <ctype.h>

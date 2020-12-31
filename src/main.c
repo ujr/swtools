@@ -1,3 +1,4 @@
+/* main */
 
 #include <assert.h>
 #include <ctype.h>
@@ -70,7 +71,7 @@ findtool(const char *name)
 static void
 identity(void)
 {
-  printf("This is %s version %s\n", progname, RELEASE);
+  printf("This is %s version %s\n", progname, VERSION);
 }
 
 static void

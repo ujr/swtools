@@ -315,5 +315,5 @@ errmsg(const char *fmt, va_list ap)
     fputs(strerror(errno), fp);
   }
 
-  fputc('\n', fp);
+  putcf('\n', fp);
 }

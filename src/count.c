@@ -1,3 +1,4 @@
+/* count - count lines, words, bytes */
 
 #include "common.h"
 
@@ -56,7 +57,7 @@ dofile(FILE *fp, const char *fn, long *pnl, long *pnw, long *pnc)
 
   inword = 0;
   nl = nw = nc = 0;
-  while ((c = fgetc(fp)) != EOF) {
+  while ((c = getcf(fp)) != EOF) {
     nc += 1;
     if (c > ' ' && c != 127) { /* ASCII */
       if (!inword) {

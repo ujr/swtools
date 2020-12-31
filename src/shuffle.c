@@ -1,3 +1,4 @@
+/* shuffle - shuffle lines */
 
 #include <setjmp.h>
 #include <stddef.h>
@@ -30,9 +31,8 @@ shufflecmd(int argc, char **argv)
 
   srand(seed >= 0 ? (unsigned) seed : (unsigned) time(0));
 
-  if (verbosity > 0 && seed >= 0) {
-    fprintf(stderr, "(random seed = %ld, RAND_MAX = %ld)\n", seed, (long) RAND_MAX);
-  }
+  if (seed >= 0)
+    debug("(random seed = %ld, RAND_MAX = %ld)", seed, (long) RAND_MAX);
 
   if (num > 0) {
     size_t *nums = 0;
@@ -135,7 +135,8 @@ parseopts(int argc, char **argv, long *seed, int *num)
   return i; /* #args parsed */
 }
 
-static void usage(const char *errmsg)
+static void
+usage(const char *errmsg)
 {
   FILE *fp = errmsg ? stderr : stdout;
   if (errmsg) fprintf(fp, "%s: %s\n", me, errmsg);

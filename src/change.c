@@ -1,3 +1,4 @@
+/* change - change patterns in text */
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -54,7 +55,7 @@ changecmd(int argc, char **argv)
   while (getline(&linebuf, '\n', stdin) > 0) {
     line = strbuf_ptr(&linebuf);
     subline(line, pat, flags, sub, &outbuf);
-    fputs(strbuf_ptr(&outbuf), stdout);
+    putstr(strbuf_ptr(&outbuf));
     strbuf_trunc(&outbuf, 0);
   }
 

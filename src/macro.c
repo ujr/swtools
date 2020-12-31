@@ -1,4 +1,4 @@
-/* macro */
+/* macro - expand string definitions (with arguments) */
 
 #include <assert.h>
 #include <ctype.h>
@@ -21,7 +21,7 @@
 #define RQUOTE   '\''
 
 typedef enum {
-  UNDEF, MACTYPE, DEFINE, FORGET, IFDEF, IFELSE,
+  UNDEF, MACRO, DEFINE, FORGET, IFDEF, IFELSE,
   EXPR, LEN, SUBSTR, DNL, CHANGEQ, DUMPDEFS
 } sttype;
 
@@ -288,7 +288,7 @@ static void dodef(int i, int j)
     const char *name = ARGSTR(i+2);
     const char *defn = ARGSTR(i+3);
     debug("{define %s=%s}", name, defn);
-    install(name, defn, MACTYPE);
+    install(name, defn, MACRO);
   }
   else error("%s: too few arguments", ARGSTR(i+1));
 }
@@ -766,5 +766,5 @@ usage(const char *errmsg)
   fprintf(fp, "Usage: %s [files]\n", me);
   fprintf(fp, "Macro processor: expand string definitions with arguments.\n");
   fprintf(fp, "Define macros: define(name,expansion) where `expansion` may\n");
-  fprintf(fp, "refer to arguments $1 to $9, e.g., define(putc,fputc($1,STDOUT))\n");
+  fprintf(fp, "refer to arguments $1 to $9, e.g., define(putc,putcf($1,STDOUT))\n");
 }

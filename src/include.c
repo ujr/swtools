@@ -1,3 +1,4 @@
+/* include - file inclusion */
 
 #include <ctype.h>
 
@@ -113,7 +114,8 @@ parseopts(int argc, char **argv)
     for (++p; *p; p++) {
       switch (*p) {
         case 'h': showhelp = 1; break;
-        default: usage("invalid option"); return -1;
+        default: usage("invalid option");
+          return -1;
       }
     }
   }
@@ -124,7 +126,6 @@ parseopts(int argc, char **argv)
   return i; /* #args parsed */
 }
 
-/* usage: print usage and exit */
 static void
 usage(const char *errmsg)
 {
@@ -133,5 +134,4 @@ usage(const char *errmsg)
   fprintf(fp, "Usage: %s [file]\n", me);
   fprintf(fp, "Include files while copying input to standard output\n");
   fprintf(fp, "Specify include files as: #include \"filename\"\n");
-  exit(errmsg ? FAILHARD : SUCCESS);
 }

@@ -1,3 +1,4 @@
+/* print - dump arbitrary input to stdout */
 
 #include <ctype.h>
 #include <unistd.h> /* POSIX */

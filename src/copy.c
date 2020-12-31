@@ -1,3 +1,4 @@
+/* copy - copy a file (or stdin) to a new file (or stdout) */
 
 #include "common.h"
 

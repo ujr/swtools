@@ -1,3 +1,4 @@
+/* translit - transliterate, squash, or delete characters */
 
 #include <assert.h>
 #include <stdarg.h>
@@ -65,7 +66,8 @@ parseargs(int argc, char **argv,
       switch (*p) {
         case 'c': *allbut = true; break;
         case 'h': usage(0); break;
-        default: usage("invalid option"); return -1;
+        default: usage("invalid option");
+          return -1;
       }
     }
   }
@@ -90,10 +92,8 @@ parseargs(int argc, char **argv,
     return -1;
   }
 
-  if (verbosity > 0) {
-    fprintf(stderr, "src: \"%s\"\n", src->buf);
-    fprintf(stderr, "dst: \"%s\"\n", dst->buf);
-  }
+  debug("src: \"%s\"", src->buf);
+  debug("dst: \"%s\"", dst->buf);
 
   return argc;
 }
@@ -116,7 +116,6 @@ index(const char *s, size_t slen, int c)
   return p ? p - s : -1;
 }
 
-/* usage: print usage and exit */
 static void
 usage(const char *errmsg)
 {
@@ -124,5 +123,4 @@ usage(const char *errmsg)
   if (errmsg) fprintf(fp, "%s: %s\n", me, errmsg);
   fprintf(fp, "Usage: %s [-c] src [dest]\n", me);
   fprintf(fp, "Transliterate, squash, or delete characters\n");
-  exit(errmsg ? FAILHARD : SUCCESS);
 }

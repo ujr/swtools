@@ -8,8 +8,7 @@
 
 #include "strbuf.h"
 
-#define VERSION "0.1"
-#define RELEASE "0.1.0"
+#define VERSION "0.1.0"
 
 #define SUCCESS    0  /* status code for successful execution */
 #define FAILHARD 127  /* status code for permanent (hard) error */
@@ -33,8 +32,10 @@ extern jmp_buf errjmp;  /* longjmp here to give up */
 /* Primitives */
 
 #define putch(c) putchar(c)
+#define putcf(c,fp) fputc(c,fp)
 #define putstr(s) fputs(s, stdout)
 #define getch getchar
+#define getcf(fp) fgetc(fp)
 
 #define streq(s,t) (0==strcmp((s),(t)))
 

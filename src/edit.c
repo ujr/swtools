@@ -1,4 +1,4 @@
-/* edit */
+/* edit - edit text files */
 
 #include <ctype.h>
 #include <setjmp.h>
@@ -80,7 +80,7 @@ typedef struct {
   undoitem *ustk;  /* undo stack (buf.h) */
   size_t uptr;     /* pointer into undo stack */
   bool helpmode;   /* if true, automatically show errhelp */
-  const char *errhelp;  /* explanation of most recent ? */
+  char errhelp[128]; /* explanation of most recent ? */
 } edstate;
 
 static void initialize(edstate *ped);
@@ -150,10 +150,9 @@ static opstate doundo(edstate *ped);
 static opstate doredo(edstate *ped);
 
 /* output routines and miscellaneous */
-static void putline(const char *line); /* expects newline */
 static void sigint(int signo);
 static opstate checkint(opstate status);
-static opstate ederr(edstate *ped, const char *msg);
+static opstate ederr(edstate *ped, const char *fmt, ...);
 static int parseopts(int argc, char **argv);
 static void usage(const char *errmsg);
 
@@ -194,8 +193,7 @@ editcmd(int argc, char **argv)
 
   strbuf_nomem(memfail);
   if (setjmp(memjmp)) {
-    fputs("{jumped}\n", stderr);
-    ed.errhelp = "out of memory";
+    ederr(&ed, "out of memory");
     if (!ed.helpmode) message("?");
     else message("? %s", ed.errhelp);
   }
@@ -213,16 +211,17 @@ again:
     if (status == ED_END) break;
     if (status == ED_ERR) {
       if (!ed.helpmode) message("?");
-      else message("? %s", ed.errhelp ? ed.errhelp : "oops");
+      else message("? %s", ed.errhelp[0] ? ed.errhelp : "oops");
       ed.curln = MIN(cursave, ed.lastln);
     }
-    else ed.errhelp = 0;
+    else ed.errhelp[0] = 0;
   }
 
   if (intflag) {
-    message("?");
     intflag = 0;
-    ed.errhelp = "interrupted";
+    ederr(&ed, "interrupted");
+    if (!ed.helpmode) message("?");
+    else message("? %s", ed.errhelp);
     clearerr(stdin);
     clearerr(stdout);
     goto again;
@@ -253,7 +252,7 @@ initialize(edstate *ped)
   ped->ustk = 0;
   ped->uptr = 0;
   ped->helpmode = false;
-  ped->errhelp = 0;
+  ped->errhelp[0] = 0;
 }
 
 static void
@@ -856,7 +855,7 @@ docmd(edstate *ped, const char *cmd, int *pi, bool glob)
         message("%d", ped->line2); /* line2 defaults to curln */
       break;
     case HCMD: /* help */
-      message("! %s", ped->errhelp ? ped->errhelp : "alright");
+      message("! %s", ped->errhelp[0] ? ped->errhelp : "alright");
       status = ED_OK;
       break;
     case HHCMD: /* help mode */
@@ -938,7 +937,7 @@ doprint(edstate *ped, int n1, int n2)
     return ederr(ped, "line numbers out of range");
   for (n = n1; n <= n2; n++) {
     const char *s = bufget(ped, n);
-    putline(s);
+    putstr(s);
     if ((status = checkint(status)) != ED_OK) break;
   }
   ped->curln = n2;
@@ -1089,7 +1088,7 @@ doread(edstate *ped, int n)
   const char *fn = strbuf_ptr(&ped->fnbuf);
 
   FILE *fp = fopen(fn, "r");
-  if (!fp) return ederr(ped, "cannot open file");
+  if (!fp) return ederr(ped, "cannot open file: %s", strerror(errno));
 
   pushcmd(ped, 'r');
 
@@ -1117,7 +1116,7 @@ dowrite(edstate *ped, int n1, int n2, bool append)
   const char *fn = strbuf_ptr(&ped->fnbuf);
 
   FILE *fp = fopen(fn, append ? "a" : "w");
-  if (!fp) return ederr(ped, "cannot open file");
+  if (!fp) return ederr(ped, "cannot open file: %s", strerror(errno));
 
   for (n = n1; n <= n2; n++) {
     const char *line = bufget(ped, n);
@@ -1327,12 +1326,6 @@ doredo(edstate *ped)
 }
 
 static void
-putline(const char *line)
-{
-  fputs(line, stdout);
-}
-
-static void
 sigint(int signo)
 {
   UNUSED(signo);
@@ -1348,9 +1341,12 @@ checkint(opstate status)
 }
 
 static opstate /* set message and return ERR */
-ederr(edstate *ped, const char *msg)
+ederr(edstate *ped, const char *fmt, ...)
 {
-  ped->errhelp = msg;
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(ped->errhelp, sizeof(ped->errhelp), fmt, ap);
+  va_end(ap);
   return ED_ERR;
 }
 

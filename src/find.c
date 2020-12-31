@@ -1,3 +1,4 @@
+/* find - print lines matching a pattern (grep) */
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -93,7 +94,7 @@ dofile(FILE *fp, const char *pat, const char *fn)
     if (invert ^ (pos >= 0)) {
       if (showname) fprintf(stdout, "%s:", fn);
       if (showlineno) fprintf(stdout, "%ld:", lineno);
-      fputs(line, stdout);
+      putstr(line);
     }
   }
 

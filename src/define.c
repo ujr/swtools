@@ -1,3 +1,4 @@
+/* define - expand string definitions */
 
 #include <ctype.h>
 #include <stdarg.h>
@@ -13,8 +14,11 @@
 #define STR(sp) strbuf_ptr(sp)
 #define HASHSIZE 53  /* prime */
 
-typedef enum { UNDEF, DEFTYPE, MACTYPE, FORGET, DNL, DUMPSYMS } sttype;
+typedef enum {
+  UNDEF, MACRO, DEFINE, FORGET, DNL, DUMPDEFS
+} sttype;
 
+/* symbol table entry */
 struct ndblock {
   size_t nameofs;
   size_t defnofs;
@@ -25,6 +29,12 @@ struct ndblock {
 static int gettok(strbuf *sp, FILE *fp);
 static bool getdef(strbuf *pname, strbuf *ptext, FILE *fp);
 static bool getnamearg(strbuf *pname, FILE *fp);
+static void skipbl(FILE *fp);
+/* TODO possible opts: hashsize, recursion/iteration limit */
+static int parseopts(int argc, char **argv);
+static void usage(const char *errmsg);
+
+/* Symbol Table */
 
 static sttype lookup(const char *pname, const char **pptext);
 static void install(const char *pname, const char *ptext, sttype tt);
@@ -35,17 +45,14 @@ static void hashfree(void);
 static struct ndblock *hashfind(const char *s);
 static int hash(const char *s);
 
+/* Push Back Input */
+
 static int getpbc(FILE *fp);
-static void putback(char c);
-static void pbstr(const char *s);
-static void skipbl(FILE *fp);
+static void unputc(char c);
+static void unputs(const char *s);
 
-/* TODO possible opts: hashsize, recursion/iteration limit */
-static int parseopts(int argc, char **argv);
-static void usage(const char *errmsg);
-
-static char *pushbuf = 0; /* push back (buf.h) */
-static strbuf symbuf = {0}; /* symbol definitions */
+static char *pushbuf = 0;      /* push back (buf.h) */
+static strbuf symbuf = {0};    /* symbol definitions */
 static struct ndblock *hashtab[HASHSIZE];
 
 int
@@ -62,10 +69,10 @@ definecmd(int argc, char **argv)
   SHIFTARGS(argc, argv, r);
 
   hashinit();
-  install("define", 0, DEFTYPE);
+  install("define", 0, DEFINE);
   install("forget", 0, FORGET);
   install("dnl", 0, DNL);
-  install("dumpsyms", 0, DUMPSYMS);
+  install("dumpdefs", 0, DUMPDEFS);
 
   while ((c = gettok(&tokbuf, stdin)) != EOF) {
     token = strbuf_ptr(&tokbuf);
@@ -74,23 +81,23 @@ definecmd(int argc, char **argv)
     else if ((tt = lookup(token, &defn)) == UNDEF)
       putstr(token);
     else switch (tt) {
-      case DEFTYPE:
+      case DEFINE:
         if (getdef(&tokbuf, &defbuf, stdin))
-          install(STR(&tokbuf), STR(&defbuf), MACTYPE);
+          install(token, strbuf_ptr(&defbuf), MACRO);
         break;
       case FORGET:
         if (getnamearg(&tokbuf, stdin))
-          forget(STR(&tokbuf));
+          forget(token);
         break;
       case DNL:
         do c = gettok(&tokbuf, stdin);
         while (c != '\n' && c != EOF);
         break;
-      case DUMPSYMS:
+      case DUMPDEFS:
         dumpsyms();
         break;
       default:
-        pbstr(defn);  /* push replacement text to unput stack */
+        unputs(defn);  /* push replacement text to unput stack */
     }
   }
 
@@ -115,7 +122,7 @@ gettok(strbuf *sp, FILE *fp)
     c = getpbc(fp);
   }
   if (strbuf_len(sp) > 0) {
-    putback(c); /* got one too far */
+    unputc(c); /* got one too far */
     return strbuf_char(sp, 0);
   }
   strbuf_addc(sp, c);
@@ -172,7 +179,7 @@ skipbl(FILE *fp)
   char c;
   do c = getpbc(fp);
   while (c == ' ' || c == '\t');
-  putback(c); /* went one too far */
+  unputc(c); /* went one too far */
 }
 
 /* symbol table */
@@ -298,23 +305,23 @@ getpbc(FILE *fp)
 }
 
 static void
-putback(char c)
+unputc(char c)
 {
   buf_push(pushbuf, c);
 }
 
 static void
-pbstr(const char *s)
+unputs(const char *s)
 {
   size_t len = strlen(s);
-  while (len > 0) putback(s[--len]);
+  while (len > 0) unputc(s[--len]);
 }
 
 static int
 parseopts(int argc, char **argv)
 {
   int i, showhelp = 0;
-  for (i = 1; i <= argc && argv[i]; i++) {
+  for (i = 1; i < argc && argv[i]; i++) {
     const char *p = argv[i];
     if (*p != '-' || streq(p, "-")) break; /* no more option args */
     if (streq(p, "--")) { ++i; break; } /* end of option args */
@@ -339,5 +346,7 @@ usage(const char *errmsg)
   FILE *fp = errmsg ? stderr : stdout;
   if (errmsg) fprintf(fp, "%s: %s\n", me, errmsg);
   fprintf(fp, "Usage: %s [files]\n", me);
-  fprintf(fp, "Expand string definitions\n");
+  fprintf(fp, "Expand string definitions: after define(name,expansion)\n");
+  fprintf(fp, "any occurrence of name will be replaced by expansion and\n");
+  fprintf(fp, "the expansion will be rescanned and may be further expanded.\n");
 }
