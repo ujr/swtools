@@ -19,16 +19,8 @@ translitcmd(int argc, char **argv)
   strbuf src = {0};
   strbuf dst = {0};
 
-  /* default src and dest to empty */
-  strbuf_addz(&src, "");
-  strbuf_addz(&dst, "");
-
   r = parseargs(argc, argv, &allbut, &src, &dst);
   if (r < 0) return FAILHARD;
-  if (strbuf_failed(&src) || strbuf_failed(&dst)) {
-    error("expanding src/dest arguments");
-    return FAILSOFT;
-  }
 
   const char *s = strbuf_ptr(&src);
   size_t slen = strbuf_len(&src);

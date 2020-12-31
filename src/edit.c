@@ -13,7 +13,8 @@
 #include "regex.h"
 #include "strbuf.h"
 
-#define BUF_ABORT nomem()
+static void memfail(void);
+#define BUF_ABORT memfail()
 #include "buf.h"
 
 #define ACMD     'a'    /* append (after current line) */
@@ -157,6 +158,7 @@ static int parseopts(int argc, char **argv);
 static void usage(const char *errmsg);
 
 static volatile __sig_atomic_t intflag = 0;
+static jmp_buf memjmp;
 
 int
 editcmd(int argc, char **argv)
@@ -188,6 +190,14 @@ editcmd(int argc, char **argv)
     strbuf_addz(&ed.fnbuf, fn);
     if (doread(&ed, 0) != ED_OK)
       message("?");
+  }
+
+  strbuf_nomem(memfail);
+  if (setjmp(memjmp)) {
+    fputs("{jumped}\n", stderr);
+    ed.errhelp = "out of memory";
+    if (!ed.helpmode) message("?");
+    else message("? %s", ed.errhelp);
   }
 
 again:
@@ -1342,6 +1352,13 @@ ederr(edstate *ped, const char *msg)
 {
   ped->errhelp = msg;
   return ED_ERR;
+}
+
+static void
+memfail(void)
+{
+  debug("{MEMFAIL}");
+  longjmp(memjmp, 1);
 }
 
 static int

@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <sys/resource.h>
+
 #include "test.h"
 #include "strbuf.h"
 
@@ -14,12 +16,16 @@
 #define TERMINATED(sp) (0 == (sp)->buf[LEN(sp)])
 #define INVARIANTS(sp) (LENLTSIZE(sp) && TERMINATED(sp))
 
+static int memfailed = 0;
+static void nomem(void) { memfailed = 1; }
+
 void
 strbuf_test(int *pnumpass, int *pnumfail)
 {
   strbuf sb = {0};
   strbuf *sp = &sb;
   int i;
+  struct rlimit maxmem;
 
   int numpass = 0;
   int numfail = 0;
@@ -124,15 +130,20 @@ strbuf_test(int *pnumpass, int *pnumfail)
   INFO("size=%zu, len=%zu", SIZE(sp), LEN(sp));
   strbuf_free(sp);
 
-#if STRBUF_TEST_ALLOC_TILL_FAIL
+  /* Limit memory so this is reasonably fast */
+  maxmem.rlim_cur = 4*1024*1024;
+  maxmem.rlim_max = 4*1024*1024;
+  setrlimit(RLIMIT_DATA, &maxmem);
+  /* Register error handler to replace the default abort() */
+  strbuf_nomem(nomem);
+  memfailed = 0;
   /* Allocating until memory failure: */
   while (!strbuf_failed(sp)) {
     strbuf_addz(sp, "Appending zero-terminated string until memory failure\n");
   }
-  TEST("alloc until failure", INVARIANTS(sp));
+  TEST("alloc until failure", INVARIANTS(sp) && memfailed);
   INFO("size=%zu, len=%zu, state is failed", SIZE(sp), LEN(sp));
   strbuf_free(sp);
-#endif
 
   if (pnumpass) *pnumpass += numpass;
   if (pnumfail) *pnumfail += numfail;

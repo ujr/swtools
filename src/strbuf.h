@@ -22,6 +22,11 @@ typedef struct strbuf {
    `strbuf_init(&sb);` (but doing so on an allocated strbuf
    results in a memory leak).
 
+   By default, the program will be aborted when a memory
+   allocation fails; this is to simplify error handling.
+   By registering an error handler, this handler will be
+   called instead of aborting the program.
+
    The buffer size is always even, its least significant bit
    thus always zero and therefore redundant; we use it as the
    failed flag (0=normal, 1=failed).
@@ -46,6 +51,8 @@ void strbuf_init(strbuf *sp);
 int strbuf_ready(strbuf *sp, size_t dlen);
 void strbuf_trunc(strbuf *sp, size_t len);
 void strbuf_free(strbuf *sp);
+
+void strbuf_nomem(void (*handler)(void));
 
 /* Define short names */
 

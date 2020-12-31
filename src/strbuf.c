@@ -9,7 +9,7 @@
 
 #include "strbuf.h"
 
-#define GROWFUNC(x) (((x)+16)*3/2) /* lifted from Git */
+#define GROWFUNC(x) (((x)+16)*3/2)  /* lifted from Git */
 #define MAX(x,y) ((x) > (y) ? (x) : (y))
 
 #define LEN(sp)     ((sp)->len)
@@ -17,6 +17,14 @@
 #define HASROOM(sp,n) (LEN(sp)+(n)+1 <= SIZE(sp))  /* +1 for \0 */
 #define NEXTSIZE(sp)  GROWFUNC(SIZE(sp))   /* next default size */
 #define SETFAILED(sp) ((sp)->size |= 1)      /* set lsb to flag */
+
+static void (*nomem)(void) = 0;
+
+void /* register error handler */
+strbuf_nomem(void (*handler)(void))
+{
+  nomem = handler;
+}
 
 void
 strbuf_init(strbuf *sp)
@@ -103,8 +111,8 @@ void /* truncate string to exactly n <= len chars */
 strbuf_trunc(strbuf *sp, size_t n)
 {
   assert(sp != 0);
-  if (!sp->buf) return; /* not allocated */
-  assert(n <= sp->len); /* cannot expand */
+  if (!sp->buf) return;  /* not allocated */
+  assert(n <= sp->len);  /* cannot enlarge */
   sp->len = n;
   sp->buf[n] = '\0';
 }
@@ -131,6 +139,11 @@ strbuf_ready(strbuf *sp, size_t dlen)
 
 nomem:
   SETFAILED(sp);
+  if (nomem) nomem();
+  else {
+    perror("strbuf");
+    abort();
+  }
   return 0;
 }
 
@@ -138,8 +151,9 @@ void /* release memory, set to unallocated */
 strbuf_free(strbuf *sp)
 {
   assert(sp != 0);
-  if (!sp->buf) return;
-  free(sp->buf);
-  sp->buf = 0;
+  if (sp->buf) {
+    free(sp->buf);
+    sp->buf = 0;
+  }
   sp->len = sp->size = 0;
 }

@@ -74,10 +74,6 @@ include(FILE *fp, const char *fn, int level, int *errcnt)
     error("error reading %s", fn);
     errcnt += 1;
   }
-  if (strbuf_failed(&namebuf)) {
-    error("out of memory");
-    *errcnt+=1;
-  }
 
   strbuf_free(&linebuf);
   strbuf_free(&namebuf);

@@ -51,7 +51,7 @@ This assigns 0 to the first field, which is the buffer pointer,
 and thereby brings the string buffer into "unallocated" state.
 Use of any of the \fBadd\fP functions (or \fBstrbuf_ready\fP)
 brings the buffer into "allocated" state, or, if a memory
-allocation fails, into "failed" state. 
+allocation fails, into "failed" state.
 The string buffer remains in "allocated" or "failed" state
 until a call to \fBstrbuf_free\fP, which brings it back
 to "unallocated" state.
@@ -89,7 +89,10 @@ buffer size unchanged).
 .PP
 Where appropriate, the functions return \fB1\fP if successful
 and \fB0\fP otherwise. The only reason for a function to not
-succeed is a memory allocation failure. Instead of testing
+succeed is a memory allocation failure. By default, the program
+is aborted if an allocation fails. This can be changed by
+registering an error handler, which may do some longjmp magic
+or may be as simple as a no-op. In this case, instead of testing
 each return value, the string buffer can be tested for "failed"
 state at any convenient time using the \fBstrbuf_failed\fP macro
 (as with
