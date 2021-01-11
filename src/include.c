@@ -8,7 +8,7 @@
 static void include(FILE *fp, const char *fn, int level, int *errcnt);
 static bool parseline(const char *s, strbuf *sp);
 
-static int parseopts(int argc, char **argv);
+static int parseopts(int argc, char **argv, int *pmaxdepth);
 static void usage(const char *errmsg);
 
 static int maxdepth = 5;
@@ -20,7 +20,7 @@ includecmd(int argc, char **argv)
   FILE *fp;
   int r, errcnt = 0;
 
-  r = parseopts(argc, argv);
+  r = parseopts(argc, argv, &maxdepth);
   if (r < 0) return FAILHARD;
   SHIFTARGS(argc, argv, r);
 
@@ -32,6 +32,7 @@ includecmd(int argc, char **argv)
     fp = openin(fn);
     if (!fp) return FAILSOFT;
     include(fp, fn, 0, &errcnt);
+    fclose(fp);
   }
 
   if (ferror(stdout)) {
@@ -55,7 +56,8 @@ include(FILE *fp, const char *fn, int level, int *errcnt)
   while ((n = getline(&linebuf, '\n', fp)) > 0) {
     const char *line = strbuf_ptr(&linebuf);
     if (parseline(line, &namebuf)) {
-      const char *fn2 = strbuf_ptr(&namebuf);
+      const char *name = strbuf_ptr(&namebuf);
+      const char *fn2 = pathqualify(&linebuf, name, fn);
       FILE *fp2 = openin(fn2);
       if (fp2) {
         include(fp2, fn2, level+1, errcnt);
@@ -104,7 +106,7 @@ parseline(const char *line, strbuf *outname)
 }
 
 static int
-parseopts(int argc, char **argv)
+parseopts(int argc, char **argv, int *pmaxdepth)
 {
   int i, showhelp = 0;
   for (i = 1; i < argc && argv[i]; i++) {
@@ -113,6 +115,14 @@ parseopts(int argc, char **argv)
     if (streq(p, "--")) { ++i; break; } /* end of option args */
     for (++p; *p; p++) {
       switch (*p) {
+        case 'm':
+          if (argv[i+1] && !p[1] && scanint(argv[i+1], pmaxdepth) > 0) {
+            i += 1;
+            if (*pmaxdepth < 0) *pmaxdepth = 0;
+            break;
+          }
+          usage("option -m requires a number argument");
+          return -1;
         case 'h': showhelp = 1; break;
         default: usage("invalid option");
           return -1;
@@ -134,4 +144,5 @@ usage(const char *errmsg)
   fprintf(fp, "Usage: %s [file]\n", me);
   fprintf(fp, "Include files while copying input to standard output\n");
   fprintf(fp, "Specify include files as: #include \"filename\"\n");
+  fprintf(fp, "Options: -m N  set max inclusion depth N (default is 5)\n");
 }

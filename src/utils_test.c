@@ -39,6 +39,14 @@ utils_test(int *pnumpass, int *pnumfail)
   TEST("control char", scanstr("\"cntrl\nchar\"", &sb) == 0);
   TEST("esc at end", scanstr("\"esc at end\\", &sb) == 0);
 
+  HEADING("Testing pathqualify()");
+  TEST("null null", streq(pathqualify(&sb, 0, 0), ""));
+  TEST("file null", streq(pathqualify(&sb, "file.txt", 0), "file.txt"));
+  TEST("file file", streq(pathqualify(&sb, "file.txt", "base.txt"), "file.txt"));
+  TEST("file dir", streq(pathqualify(&sb, "file.txt", "foo/bar"), "foo/file.txt"));
+  TEST("dir/file dir", streq(pathqualify(&sb, "dir/file.txt", "foo/bar"), "foo/dir/file.txt"));
+  TEST("/dir/file dir", streq(pathqualify(&sb, "/dir/file.txt", "foo/bar"), "/dir/file.txt"));
+
   HEADING("Testing dodash()");
   strbuf_trunc(&sb, 0);
   TEST("dodash", dodash("-ab-de-", 0, '\0', &sb) == 7 && STREQ("-abcde-", strbuf_ptr(&sb)));

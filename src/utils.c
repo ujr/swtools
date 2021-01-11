@@ -217,6 +217,30 @@ getln(char **buf, size_t *len, FILE *fp)
   return (c == EOF && n == 0) ? 0 : n;
 }
 
+/* pathqualify: qualify path relative to thisfile */
+const char *
+pathqualify(strbuf *sp, const char *path, const char *thisfile)
+{
+  const char sep = '/';
+  const char *p;
+  assert(sp != NULL);
+  strbuf_trunc(sp, 0);
+  if (!path)
+    return strbuf_ptr(sp);
+  /* path is absolute: return as-is */
+  if (*path == sep) {
+    strbuf_addz(sp, path);
+    return strbuf_ptr(sp);
+  }
+  /* path is relative: prejoin dirname(thisfile) */
+  if (thisfile && (p = strrchr(thisfile, sep))) {
+    size_t len = p - thisfile + 1;
+    strbuf_addb(sp, thisfile, len);
+  }
+  strbuf_addz(sp, path);
+  return strbuf_ptr(sp);
+}
+
 /* strclone: same as strdup(3), which is not part of C89 */
 char *
 strclone(const char *s)

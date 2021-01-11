@@ -53,6 +53,7 @@ FILE *openout(const char *filepath);
 void filecopy(FILE *fin, FILE *fout);
 int getline(strbuf *sp, int delim, FILE *fp);
 int getln(char **buf, size_t *len, FILE *fp);
+const char *pathqualify(strbuf *sp, const char *path, const char *thisfile);
 char *strclone(const char *s);
 int checkioerr();
 

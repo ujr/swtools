@@ -230,6 +230,10 @@ any line beginning `#include "filename"` with the contents of
 like the `#include` mechanism of the C preprocessor. It can be
 used to stitch files together from smaller files.
 
+As an extension over the book, we qualify relative include file
+names against the current file (standard input is considered to
+be a file in the current working directory).
+
 ## File Concatenation
 
 The **concat** tool concatenates each file argument, in order,
@@ -756,7 +760,7 @@ looks for files. There is also a lot of room for improvement
 of the tools (and certainly my re-implementation):
 
 - count: an option to count UTF-8 characters
-- include: relative to current file, not working dir
+- include: relative to current file, not working dir (done)
 - print: parameters for offset and count
 - sort: acccept multiple file arguments
 - unique: options -d and -f (as in sort)

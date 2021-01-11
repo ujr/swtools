@@ -4,7 +4,7 @@
 include \- file inclusion
 
 .SH SYNOPSIS
-\fBinclude\fP [\fIfile\fP]
+\fBinclude\fP [-m N] [\fIfile\fP]
 
 .SH DESCRIPTION
 \fBinclude\fP copies \fIfile\fP to standard output unchanged,
@@ -17,8 +17,11 @@ except that each line beginning
 .fi
 .PP
 is replaced by the contents of the file whose name is \fIfilename\fP.
-Include files may contain further \fB#include\fP lines, to arbitrary depth.
 If \fIfile\fP is not specified, standard input is read instead.
+If \fIfilename\fP is not an absolute path, it is taken relative to the
+current file's directory (the current working directory if reading stdin).
+Include files may contain further \fB#include\fP lines, up to the depth
+specified by \fB-m\fP \fIN\fP (default is 5).
 
 .SH EXAMPLE
 .nf
@@ -27,7 +30,3 @@ int main() {
   return THEANSWER;
 }
 .fi
-
-.SH BUGS
-A file that includes itself will not be diagnosed,
-but will eventually cause something to break.
