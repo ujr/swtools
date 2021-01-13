@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 #include "common.h"
+#include "eval.h"
 #include "strbuf.h"
 
 #define BUF_ABORT nomem()
@@ -57,13 +58,6 @@ static void unquote(strbuf *bp, FILE *fp);
 /* TODO possible opts: hashsize, recursion/iteration limit */
 static int parseopts(int argc, char **argv);
 static void usage(const char *errmsg);
-
-/* Expression evaluation */
-
-static char peek(const char *s, size_t *pi);
-static int factor(const char *s, size_t *pi);
-static int term(const char *s, size_t *pi);
-static int expr(const char *s, size_t *pi);
 
 /* Evaluation Stack */
 
@@ -352,11 +346,15 @@ static void doexpr(int i, int j)
   if (nargs > 0) {
     char buf[32];
     const char *s = ARGSTR(i+2);
-    size_t i = 0;
-    int val = expr(s, &i);
-    snprintf(buf, sizeof buf, "%d", val);
-    debug("{expr %s: %s}", s, buf);
-    unputs(buf);
+    const char *msg;
+    int val;
+    int r = evalint(s, &val, &msg);
+    if (r == EVAL_OK) {
+      snprintf(buf, sizeof buf, "%d", val);
+      debug("{expr %s: %s}", s, buf);
+      unputs(buf);
+    }
+    else error("%s: %s", ARGSTR(i+1), msg);
   }
   else error("%s: too few arguments", ARGSTR(i+1));
 }
@@ -381,17 +379,19 @@ static void dosub(int i, int j)
   const char *s = nargs >= 1 ? ARGSTR(i+2) : "";
   const char *m = nargs >= 2 ? ARGSTR(i+3) : 0;
   const char *n = nargs >= 3 ? ARGSTR(i+4) : 0;
-  int len = strlen(s);
-  size_t im = 0, in = 0;
-  int mm = m ? expr(m, &im) : 0;
-  int nn = n ? expr(n, &in) : len;
-  if (mm < 0) mm = 0;
-  else if (mm > len) mm = len;
-  if (nn < 0) nn = 0;
-  else if (nn > len - mm) nn = len - mm;
-  debug("{substr s=%s, m=%d, n=%d}", s, mm, nn);
-  for (k = mm + nn - 1; k >= mm; k--)
-    unputc(s[k]);
+  const char *msg;
+  int mm, nn, len = strlen(s);
+  if (evalint(m, &mm, &msg) == EVAL_OK &&
+      evalint(n, &nn, &msg) == EVAL_OK) {
+    if (mm < 0) mm = 0;
+    else if (mm > len) mm = len;
+    if (nn < 0) nn = 0;
+    else if (nn > len - mm) nn = len - mm;
+    debug("{substr s=%s, m=%d, n=%d}", s, mm, nn);
+    for (k = mm + nn - 1; k >= mm; k--)
+      unputc(s[k]);
+  }
+  else error("%s: invalid argument: %s", ARGSTR(i+1), msg);
 }
 
 /* dodnl: delete characters up to and including next newline */
@@ -476,73 +476,6 @@ static void skipbl(FILE *fp)
   do c = getpbc(fp);
   while (c == ' ' || c == '\t');
   unputc(c); /* went one too far */
-}
-
-/** Expression Evaluation **/
-
-/* Grammar:
-    expr:   term (+|-) term
-    term:   factor (*|/|%) factor
-    factor: number | ( expr )
-*/
-
-static int expr(const char *s, size_t *pi)
-{
-  int v = term(s, pi);
-  char c = peek(s, pi);
-  while (c == '+' || c == '-') {
-    *pi += 1;  /* skip operator */
-    if (c == '+')
-      v += term(s, pi);
-    else
-      v -= term(s, pi);
-    c = peek(s, pi);
-  }
-  return v;
-}
-
-static int term(const char *s, size_t *pi)
-{
-  int w, v = factor(s, pi);
-  char c = peek(s, pi);
-  while (c == '*' || c == '/' || c == '%') {
-    *pi += 1;  /* skip operator */
-    w = factor(s, pi);
-    if (c == '*') v *= w;
-    else {
-      if (w == 0)
-        error("division by zero");
-      else if (c == '/') v /= w;
-      else v %= w;
-    }
-    c = peek(s, pi);
-  }
-  return v;
-}
-
-static int factor(const char *s, size_t *pi)
-{
-  int v = 0;
-  if (peek(s, pi) == LPAREN) {
-    *pi += 1;  /* skip paren */
-    v = expr(s, pi);
-    if (peek(s, pi) != RPAREN)
-      error("missing right paren in expr");
-    *pi += 1;  /* skip paren */
-  }
-  else {
-    size_t n = scanint(s + *pi, &v);
-    if (n) *pi += n;
-    else error("expecting a number in expr");
-  }
-  return v;
-}
-
-/* peek: skip over white space, return next char */
-static char peek(const char *s, size_t *pi)
-{
-  while (isspace(s[*pi])) *pi += 1;
-  return s[*pi];
 }
 
 /** Evaluation Stack **/

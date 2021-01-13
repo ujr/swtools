@@ -22,7 +22,8 @@ TOOLS = obj/copy.o obj/count.o obj/echo.o obj/detab.o obj/translit.o \
   obj/compare.o obj/include.o obj/concat.o obj/print.o obj/sort.o \
   obj/unique.o obj/shuffle.o obj/find.o obj/change.o obj/edit.o \
   obj/define.o obj/macro.o
-bin/quux: obj/main.o $(TOOLS) obj/strbuf.o obj/sorting.o obj/lines.o obj/regex.o obj/utils.o
+bin/quux: obj/main.o $(TOOLS) obj/strbuf.o obj/sorting.o obj/lines.o \
+  obj/regex.o obj/utils.o obj/evalint.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 symlinks: bin/quux
@@ -51,8 +52,9 @@ TESTS = obj/buf_test.o \
         obj/strbuf_test.o obj/strbuf.o \
         obj/sorting_test.o obj/sorting.o \
         obj/regex_test.o obj/regex.o \
-        obj/utils_test.o obj/utils.o
-bin/runtests: obj/runtests.o obj/utils.o $(TESTS)
+        obj/utils_test.o obj/utils.o \
+        obj/eval_test.o obj/evalint.o
+bin/runtests: obj/runtests.o $(TESTS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 dist: clean
