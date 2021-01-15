@@ -23,7 +23,7 @@
 
 typedef enum {
   UNDEF, MACRO, DEFINE, FORGET, IFDEF, IFELSE,
-  EXPR, LEN, SUBSTR, DNL, CHANGEQ, DUMPDEFS
+  EXPR, LEN, SUBSTR, DNL, CHANGEQ, INCLUDE, DUMPDEFS
 } sttype;
 
 /* symbol table entry */
@@ -41,7 +41,7 @@ struct frame {
   size_t argp;         /* argument stack pointer */
 };
 
-static void expand(FILE *fp);
+static void expand(FILE *fp, const char *fn);
 static void eval(sttype kind, int i, int j);
 static void dodef(int i, int j);
 static void doundef(int i, int j);
@@ -52,6 +52,7 @@ static void dolen(int i, int );
 static void dosub(int i, int j);
 static void dodnl(void);
 static void dochq(int i, int j);
+static FILE *include(int i, int j, const char *thisfn, strbuf *sp);
 static int gettok(strbuf *sp, FILE *fp);
 static void skipbl(FILE *fp);
 static void unquote(strbuf *bp, FILE *fp);
@@ -124,6 +125,7 @@ macrocmd(int argc, char **argv)
   install("substr", 0, SUBSTR);
   install("dnl", 0, DNL);
   install("changeq", 0, CHANGEQ);
+  install("include", 0, INCLUDE);
   install("dumpdefs", 0, DUMPDEFS);
 
   r = SUCCESS;
@@ -131,10 +133,10 @@ macrocmd(int argc, char **argv)
     const char *fn = *argv++;
     FILE *fp = openin(fn);
     if (!fp) { r = FAILSOFT; goto done; }
-    expand(fp);
+    expand(fp, fn);
     fclose(fp);
   }
-  else expand(stdin);
+  else expand(stdin, 0);
 
   debug("{symbuf size: %ld}", strbuf_len(&symbuf));
 done:
@@ -150,12 +152,13 @@ done:
 
 /* expand: define and expand macros in the given file */
 static void
-expand(FILE *fp)
+expand(FILE *fp, const char *fn)
 {
   int c, tt;
   const char *token;
   const char *defn;
 
+  debug("{expand %s}", fn);
   while ((c = gettok(&tokbuf, fp)) != EOF) {
     token = strbuf_ptr(&tokbuf);
     if (isalpha(c)) {
@@ -202,14 +205,28 @@ expand(FILE *fp)
       if (prec->plev > 0)
         pushstr(token);
       else { /* end of arg list */
+        FILE *incfp = 0;
+        strbuf incbuf = {0};
         size_t ap = buf_size(argstk);
         pushnul(); /* terminate last arg string */
-        eval(prec->kind, prec->argp, ap-1);
+        if (prec->kind == INCLUDE)
+          incfp = include(prec->argp, ap-1, fn, &incbuf);
+        else {
+          incfp = 0;
+          eval(prec->kind, prec->argp, ap-1);
+        }
         /* pop eval stack */
         struct frame rec = popframe();
         size_t ep = argstk[rec.argp];
         poparg(rec.argp);
         poptoks(ep);
+        if (incfp) {
+          const char *incfn = strbuf_ptr(&incbuf);
+          debug("{include %s}", incfn);
+          expand(incfp, incfn);
+          fclose(incfp);
+        }
+        strbuf_free(&incbuf);
       }
     }
     else if (c == COMMA && buf_top(callstk)->plev == 1) {
@@ -432,6 +449,23 @@ static void dochq(int i, int j)
     rquote = r[0] ? r[0] : RQUOTE;
   }
   debug("{changeq: %c %c}", lquote, rquote);
+}
+
+/* include: get include file name and open file pointer */
+static FILE *include(int i, int j, const char *thisfn, strbuf *sp)
+{
+  int nargs = j - i + 1 - 2;
+  if (nargs > 0) {
+    FILE *fp;
+    const char *fn = ARGSTR(i+2);
+    fn = pathqualify(sp, fn, thisfn);
+    fp = fopen(fn, "r");
+    if (!fp) error("%s: cannot open %s", ARGSTR(i+1), fn);
+    errno = 0; /* clear error to not log it again */
+    return fp;
+  }
+  error("%s: too few arguments", ARGSTR(i+1));
+  return NULL;
 }
 
 /* unquote: strip quotes and put on output or eval stack */

@@ -98,5 +98,7 @@ define(`len',`ifelse($1,,0,`expr(1+len(substr($1,2)))')')
 
 .SH BUGS
 A recursive definition of the form \fBdefine(x,x)\fP will
-cause an infinite loop. Expression evaluation is fragile.
+cause an infinite loop.
 It is unwise to use parentheses as quote characters.
+File inclusion must not occur nested within a macro
+or built-in call (this may or may not be a bug).

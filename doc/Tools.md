@@ -728,6 +728,23 @@ define(reverse,`ifelse($1,,,`reverse(substr($1,1)) substr($1,0,1)')')
 The **expr** built-in is implemented by a simple
 *recursive descent* parser and evaluator.
 
+**Exercise 8-28.** The macro `rpt(s,n)` shall evaluate to
+`s(1)`, `s(2)`, ... `s(n)` — below is a solution. Unless
+frequently used, another built-in is hardly worth the effort
+and the silent feature creap.
+
+```text
+define(rpt,`ifelse($2,0,,`rpt($1,expr($2-1)) $1($2)')')
+```
+
+**Exercise 8-29.** The new built-in `include(fn)` shall
+expand to the contents of the file `fn` and the included
+text shall also be scanned for macros. One idea is to read
+the entire file `fn` into the push back buffer (and reverse).
+More economical on memory is a nested call to `expand()` but
+we can only do it after the eval stack has been popped.
+The latter approach has been implemented.
+
 It is instructive to compare with Jon Bentley's M1 macro
 processor (written in AWK) and the still common M4 macro
 processor, which traces its origins to the earlier Fortran
@@ -760,7 +777,6 @@ looks for files. There is also a lot of room for improvement
 of the tools (and certainly my re-implementation):
 
 - count: an option to count UTF-8 characters
-- include: relative to current file, not working dir (done)
 - print: parameters for offset and count
 - sort: acccept multiple file arguments
 - unique: options -d and -f (as in sort)
@@ -768,7 +784,6 @@ of the tools (and certainly my re-implementation):
   (for upper, lower, alnum, etc.)
 - find, change: word boundary zero-width pat elem
 - edit: limit size of undo stack
-- macro: file inclusion (exercise 8-29)
 - macro: hold expansion of name in define(name,stuff),
   forget(name), ifdef(name, ...) – would add to usability,
   but that is my personal opinion.
