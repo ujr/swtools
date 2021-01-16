@@ -22,8 +22,8 @@
 #define RQUOTE   '\''
 
 typedef enum {
-  UNDEF, MACRO, DEFINE, FORGET, IFDEF, IFELSE,
-  EXPR, LEN, SUBSTR, DNL, CHANGEQ, INCLUDE, DUMPDEFS
+  UNDEF, MACRO, DEFINE, FORGET, IFDEF, IFELSE, EXPR,
+  LEN, SUBSTR, DNL, CHANGEQ, INCLUDE, DUMPDEFS, TRACE
 } sttype;
 
 /* symbol table entry */
@@ -49,9 +49,10 @@ static void doifdef(int i, int j);
 static void doifelse(int i, int j);
 static void doexpr(int i, int j);
 static void dolen(int i, int );
-static void dosub(int i, int j);
+static void dosubstr(int i, int j);
 static void dodnl(void);
 static void dochq(int i, int j);
+static void dotrace(int i, int j);
 static FILE *include(int i, int j, const char *thisfn, strbuf *sp);
 static int gettok(strbuf *sp, FILE *fp);
 static void skipbl(FILE *fp);
@@ -71,14 +72,14 @@ static void poptoks(size_t ep);
 static void pusharg(void);
 static void poparg(size_t ap);
 
-static void traceeval(sttype kind, int argstk[], int i, int j);
+static void dumpcall(int i, int j);
 
 /* Symbol Table */
 
 static sttype lookup(const char *pname, const char **pptext);
 static void install(const char *pname, const char *ptext, sttype tt);
 static void forget(const char *pname);
-static void dumpsyms(void);
+static void dumpdefs(void);
 static void hashinit(void);
 static void hashfree(void);
 static struct ndblock *hashfind(const char *s);
@@ -105,6 +106,7 @@ static char *evalstk = 0;      /* macro name, defn, arguments (buf.h) */
 
 static char lquote = LQUOTE;
 static char rquote = RQUOTE;
+static int tracing = 0;
 
 int
 macrocmd(int argc, char **argv)
@@ -127,6 +129,7 @@ macrocmd(int argc, char **argv)
   install("changeq", 0, CHANGEQ);
   install("include", 0, INCLUDE);
   install("dumpdefs", 0, DUMPDEFS);
+  install("trace", 0, TRACE);
 
   r = SUCCESS;
   if (argc > 0) while (*argv) {
@@ -209,6 +212,7 @@ expand(FILE *fp, const char *fn)
         strbuf incbuf = {0};
         size_t ap = buf_size(argstk);
         pushnul(); /* terminate last arg string */
+        if (tracing) dumpcall(prec->argp, ap-1);
         if (prec->kind == INCLUDE)
           incfp = include(prec->argp, ap-1, fn, &incbuf);
         else {
@@ -247,8 +251,6 @@ expand(FILE *fp, const char *fn)
 static void
 eval(sttype kind, int i, int j)
 {
-  if (verbosity > 1)
-    traceeval(kind, argstk, i, j);
   if (kind == DEFINE)
     dodef(i, j);
   else if (kind == FORGET)
@@ -262,13 +264,15 @@ eval(sttype kind, int i, int j)
   else if (kind == LEN)
     dolen(i, j);
   else if (kind == SUBSTR)
-    dosub(i, j);
+    dosubstr(i, j);
   else if (kind == DNL)
     dodnl();
   else if (kind == CHANGEQ)
     dochq(i, j);
   else if (kind == DUMPDEFS)
-    dumpsyms();
+    dumpdefs();
+  else if (kind == TRACE)
+    dotrace(i, j);
   else {
     int t = argstk[i];
     int k = t;
@@ -389,13 +393,13 @@ static void dolen(int i, int j)
   }
 }
 
-/* dosub: substr(s,m,n): emit substring of argument */
-static void dosub(int i, int j)
+/* dosubstr: substr(s,m,n): emit substring of argument */
+static void dosubstr(int i, int j)
 {
   int k, nargs = j - i + 1 - 2;
   const char *s = nargs >= 1 ? ARGSTR(i+2) : "";
-  const char *m = nargs >= 2 ? ARGSTR(i+3) : 0;
-  const char *n = nargs >= 3 ? ARGSTR(i+4) : 0;
+  const char *m = nargs >= 2 ? ARGSTR(i+3) : "0";
+  const char *n = nargs >= 3 ? ARGSTR(i+4) : "999999";
   const char *msg;
   int mm, nn, len = strlen(s);
   if (evalint(m, &mm, &msg) == EVAL_OK &&
@@ -449,6 +453,28 @@ static void dochq(int i, int j)
     rquote = r[0] ? r[0] : RQUOTE;
   }
   debug("{changeq: %c %c}", lquote, rquote);
+}
+
+static bool matchword(const char *text, const char *word)
+{
+  size_t len;
+  if (!text || !word) return 0;
+  len = strlen(word);
+  while (isspace(*text)) ++text; /* skip leading space */
+  if (strncmp(text, word, len)) return 0;
+  text += len;
+  while (isspace(*text)) ++text; /* ignore trailing space */
+  return *text == 0;
+}
+
+/* dotrace: trace(on|off) to turn tracing on or off */
+static void dotrace(int i, int j)
+{
+  const char *arg = ARGSTR(i+2);
+  UNUSED(j);
+  if (matchword(arg, "on")) tracing = 1;
+  else if (matchword(arg, "off")) tracing = 0;
+  else error("%s: argument must be on or off", ARGSTR(i+1));
 }
 
 /* include: get include file name and open file pointer */
@@ -558,13 +584,16 @@ static void poparg(size_t ap) {
     (void) buf_pop(argstk);
 }
 
-static void
-traceeval(sttype kind, int argstk[], int i, int j) {
-  int k;
-  fprintf(stderr, "eval(kind=%d,i=%d,j=%d):\n", kind, i, j);
-  for (k = j; k >= i; k--) {
-    fprintf(stderr, "%2d:%s$\n", k, ARGSTR(k));
+static void dumpcall(int i, int j)
+{
+  const char *name = ARGSTR(i+1);
+  int k, nargs = j - i + 1 - 2;
+  fprintf(stderr, ">>> %s(", name);
+  for (k = 1; k <= nargs; k++) {
+    if (k > 1) fprintf(stderr, ", ");
+    fprintf(stderr, "%s", ARGSTR(i+1+k));
   }
+  fprintf(stderr, ")\n");
 }
 
 /** Symbol Table **/
@@ -620,20 +649,22 @@ forget(const char *pname)
   /* silently not found */
 }
 
-/* dumpsyms: dump the symbol table to stderr */
+/* dumpdefs: dump the symbol table to stderr */
 static void
-dumpsyms(void)
+dumpdefs(void)
 {
   int i;
   const char *base = strbuf_ptr(&symbuf);
   for (i = 0; i < HASHSIZE; i++) {
     struct ndblock *p = hashtab[i];
     while (p) {
-      debug("{%2d:%s=%d,%s}", i, base+p->nameofs, p->kind, base+p->defnofs);
+      fprintf(stderr, ">>> %2d:%s=", i, base + p->nameofs);
+      if (p->kind != MACRO) fprintf(stderr, "(builtin)\n");
+      else fprintf(stderr, "%s\n", base + p->defnofs);
       p = p->next;
     }
   }
-  debug("{hashsize is %d}", HASHSIZE);
+  fprintf(stderr, ">>> hashsize is %d\n", HASHSIZE);
 }
 
 static void

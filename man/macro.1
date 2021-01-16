@@ -80,8 +80,11 @@ length of its argument in characters.
 and \fIy\fP. \fBchangeq()\fP changes them back to \fB`\fP
 and \fB'\fP.
 
-\fBdumpdefs\fP dumps all definitions to standard error
-if verbosity is at least one.
+\fBdumpdefs\fP dumps all definitions to standard error.
+
+\fBtrace\fP(on|off) turns tracing on or off (default: off);
+when tracing is on, each invocation of a macro or a builtin
+is printed to standard error.
 
 Each replacement string is rescanned for further possible
 replacements, permitting multi-level definitions to be
@@ -101,4 +104,6 @@ A recursive definition of the form \fBdefine(x,x)\fP will
 cause an infinite loop.
 It is unwise to use parentheses as quote characters.
 File inclusion must not occur nested within a macro
-or built-in call (this may or may not be a bug).
+or built-in call (this may or may not be a bug); a
+file that includes itself (directly or indirectly)
+is not diagnosed and will break in an overflow.

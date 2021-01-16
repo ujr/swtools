@@ -1,0 +1,7 @@
+Exercise 8-28 (macro)
+
+define(`rpt', `ifelse($2,0,,`rpt(`$1',expr($2-1))' `$1'($2))')
+define(`sqr',`expr(($1)*($1))')
+rpt(`sqr',5)
+
+Should emit: 1 4 9 16 25

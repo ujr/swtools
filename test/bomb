@@ -1,0 +1,2 @@
+#include "bomb"
+include(bomb)

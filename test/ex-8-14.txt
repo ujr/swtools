@@ -1,0 +1,10 @@
+Exercise 8-14 (macro)
+
+define(STDIN,0)
+define(STDOUT,1)
+define(getc,getcf(`STDIN'))
+define(putc,putcf($1,`STDOUT'))
+
+putc(getc())
+
+Should emit: putcf(getcf(0),1)

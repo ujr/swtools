@@ -698,9 +698,12 @@ not push back to input. This way upon each evaluation, one
 level of quotes (and only one) is removed.
 
 ```text
+define(STDIN,0)
 define(STDOUT,1)
-define(putc,putcf($1,STDOUT))
+define(getc,getcf(`STDIN'))
+define(putc,putcf($1,`STDOUT'))
 putc(x)                        // emits putcf(x,1)
+putc(getc())                   // emits putcf(getcf(0),1)
 define(incr, $1:=$1+1)
 incr(x)                        // emits x:=x+1
 define(cat,$1$2$3$4$5$6$7$8$9)
@@ -721,20 +724,46 @@ define(`x',z)                  // redefines x
 define(sqr, $1*$1)             // careful about precedence:
 sqr(x+1)                       // use parens or get x+1*x+1
 
-define(length,`ifelse($1,,0,`expr(1+len(substr($1,1)))')')
+define(length,`ifelse($1,,0,`expr(1+length(substr($1,1)))')')
 define(reverse,`ifelse($1,,,`reverse(substr($1,1)) substr($1,0,1)')')
 ```
 
+**Exercise 8-14.** Tracing the macro call `putc(getc())`
+assuming the definitions above. The diagram shows the
+progression of the evaluation stack and the push backs
+in-between.
+
+```text
+call:              getc()            STDIN()           putc($1)           STDOUT()
+unput:          getcf(STDIN)            0        putcf(getcf(0),STDOUT)       |
+output:              |                  |                  |          putcf(getcf(0),1)
+  |                  |                  |                  |                  |
+  |                  | STDIN            |                  |                  |
+e | getc             | 0                |                  |                  |
+m | getcf(STDIN)     | ---------------- |                  |                  |
+p | ---------------- | getcf(           | getcf(0)         |                  |
+t | putc             | putc             | putc             | STDOUT           |
+y | putcf($1,STDOUT) | putcf($1,STDOUT) | putcf($1,STDOUT) | 1                | (empty)
+= | ================ | ================ | ================ | ================ | =======
+```
+
 The **expr** built-in is implemented by a simple
-*recursive descent* parser and evaluator.
+*recursive descent* parser and evaluator; it lives
+in its own [evalint.c](../src/evalint.c) file.
+
+**Exercise 8-25.** The built-in `trace(on|off)` turns tracing
+on or off; when on, each invocation of a macro or built-in is
+dumped to stderr.
 
 **Exercise 8-28.** The macro `rpt(s,n)` shall evaluate to
 `s(1)`, `s(2)`, ... `s(n)` — below is a solution. Unless
 frequently used, another built-in is hardly worth the effort
-and the silent feature creap.
+and the dreaded feature creap.
 
 ```text
-define(rpt,`ifelse($2,0,,`rpt($1,expr($2-1)) $1($2)')')
+define(`rpt', `ifelse($2,0,,`rpt(`$1',expr($2-1))' `$1'($2))')
+define(`sqr',`expr(($1)*($1))')
+rpt(`sqr',5)           // should emit 1 4 9 16 25
 ```
 
 **Exercise 8-29.** The new built-in `include(fn)` shall
@@ -744,12 +773,23 @@ the entire file `fn` into the push back buffer (and reverse).
 More economical on memory is a nested call to `expand()` but
 we can only do it after the eval stack has been popped.
 The latter approach has been implemented.
+There is no guard against a file including itself; two
+appraoches that come to mind are: (1) limit the inclusion
+depth, as done in the **include** tool, or (2) keeping a
+list of active files and refusing to include an active file.
 
 It is instructive to compare with Jon Bentley's M1 macro
 processor (written in AWK) and the still common M4 macro
 processor, which traces its origins to the earlier Fortran
 edition of the *Software Tools* book. See [m1.pdf](m1.pdf)
 and [m4.pdf](m4.pdf) for local copies of the relevant papers.
+
+|  |define|macro|m4|m1|
+|--:|:---:|:---:|:---:|:---:|
+|unit of expansion:|identifier|identifier|identifier|@name@|
+|evaluation:|late|early|early|late|
+|rescanning:|yes|yes|yes|yes|
+|arguments:|no|$1 $2 ...|$1 $2 ...|no|
 
 ## The End
 
@@ -771,10 +811,20 @@ Tools in the book but not implemented here:
 *kwic* and *unrotate*, *format*.
 Tools implemented here but not in the book: *shuffle*.
 
-The only thing that is really missing is a simple shell
+The only thing that is really missing is a simple **shell**
 and maybe an equivalent for the Unix *find* command, which
-looks for files. There is also a lot of room for improvement
-of the tools (and certainly my re-implementation):
+looks for files.
+On the other hand, all tools presented in the book also
+exist in any Unix system today, some using different names.
+Therefore in real life, you would probably want to stick to
+the [GNU tools][coreutils] or use [BusyBox][busybox] or
+a similar set of proven tools and use the book to gain
+insight into and appreciation of those tools.
+
+[busybox]: https://busybox.net/
+[coreutils]: https://www.gnu.org/software/coreutils/
+
+Here are a few ideas for simple improvements:
 
 - count: an option to count UTF-8 characters
 - print: parameters for offset and count
@@ -787,13 +837,3 @@ of the tools (and certainly my re-implementation):
 - macro: hold expansion of name in define(name,stuff),
   forget(name), ifdef(name, ...) – would add to usability,
   but that is my personal opinion.
-
-On the other hand, all tools presented in the book also
-exist in any Unix system today, some using different names.
-Therefore in real life, you would probably want to stick to
-the [GNU tools][coreutils] or use [BusyBox][busybox] or
-a similar set of proven tools and use the book to gain
-insight into and appreciation of those tools.
-
-[busybox]: https://busybox.net/
-[coreutils]: https://www.gnu.org/software/coreutils/
