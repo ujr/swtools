@@ -91,14 +91,14 @@ their mapping to the C standard library is in the separate
 ## File Copying
 
 The first tool in the book is **copy** for copying standard
-input to standard output (pp. 7-12). The translation to C
+input to standard output (pp. 7–12). The translation to C
 is straightforward, especially because the concept of
 standard input and output is native to C.
 
 The *copy* tool was amended to accept optional arguments
 that specify an input file (must exist) and on output file
 (will be created or truncated); it therefore subsumes
-*makecopy* from the book (pp. 83-85).
+*makecopy* from the book (pp. 83–85).
 
 ## Counting Bytes, Words, Lines
 
@@ -121,8 +121,8 @@ the variation suggested in Exercise 1-7(b) and my
 *tabpos* function returns the *next* tab stop *after*
 the given column.
 
-Both *detab* and *entab* are in the same file *detab.c*
-because they share a lot of code.
+Both *detab* and *entab* are in the same file
+[detab.c](../src/detab.c) because they share a lot of code.
 
 ## Compress and Expand
 
@@ -173,14 +173,24 @@ allocation, and to hide the housekeeping part so that the buffer
 and [sds][sds]). The downside is that such schemes potentially
 return a new buffer pointer on each append operation, and
 that such strings are easily confused with plain C strings.
-My implementation, *strbuf*, is an explicit string buffer
-with separate housekeepking.
+My implementation, [strbuf.c](../src/strbuf.c), is an explicit
+string buffer with separate housekeepking.
 
 By the way, both the book and the man page speak of *character*
 transliteration, but it really is *byte by byte* transliteration.
 With ASCII (and other one-byte-per-character encodings) this makes
 no difference. But with multi-byte encodings (e.g. UTF-8)
 this does make a difference, but I ignore it here.
+
+Examples of transliteration:
+
+- `translit a-z A-Z` — to upper case
+- `translit a-z b-za` — a Caesar shift
+- `translit a-zA-Z a | translit 0-9 n`
+- `translit -c a-z -` — replace all non-letters with a dash
+- `translit -c a-z` — delete all but lower-case letters
+- `translit ' \t\n' '\n'` — leave one world per line
+- `translit '\\'` — remove backslashes
 
 [sds]: https://github.com/antirez/sds
 [growable-buf]: https://github.com/skeeto/growable-buf
@@ -204,18 +214,18 @@ Since we already have a growable string buffer implementation
 The third option is certainly more efficient, because it has access
 to the innards of the standard IO library.
 Will go for the second option. Return value is number of characters
-read, including the delimiter, 0 on end-of-file, -1 on error.
+read, including the delimiter, `0` on end-of-file, `-1` on error.
 
 Unlike the standard *diff* tool, the *compare* here is a plain
 line-by-line comparison and therefore may find lots of differing
 lines if only one line has been added or deleted.
 
-**Exercise 3-5** asks what happens if *compare* is asked to
-compare a file with itself, that is: **compare _f_ _f_**  
-If *f* is a named file, this should and will work: *f* is
+**Exercise 3-5.** What happens if *compare* is asked
+to compare a file with itself (`compare f f`)?
+If *f* is a named file, this should and does work: *f* is
 opened twice, each open file has its own file pointer, and
 its own current offset. If *f* refers to the standard input
-(can be achieved with **compare - -** or **foo | compare -**),
+(can be achieved with `compare - -` or `foo | compare -`),
 an already opened file, then there is only one file pointer
 and only one current offset, so that *compare* would compare
 odd numbered lines against even numbered lines.
@@ -226,13 +236,15 @@ by defining standard input to be identical to itself.
 
 The **include** tool copies input to standard output, replacing
 any line beginning `#include "filename"` with the contents of
-*filename*, which can itself include other files. This is exactly
-like the `#include` mechanism of the C preprocessor. It can be
-used to stitch files together from smaller files.
+*filename*, which can itself include other files. This is like
+the `#include` mechanism of the C preprocessor and can be used
+to stitch files together from smaller files.
 
 As an extension over the book, we qualify relative include file
-names against the current file (standard input is considered to
-be a file in the current working directory).
+names against the current file. For example, when the file `foo/bar`
+includes the file `baz`, the file `foo/baz` will be read. This is
+what users would expect. (For this purpose, standard input is
+considered to be a file in the current working directory).
 
 ## File Concatenation
 
@@ -257,9 +269,9 @@ These are not part of POSIX, however.)
 
 ## File Printing
 
-The book's **print** tool is intended to "print" some files with top
-and bottom margins, a heading line, and filling the last page with
-blank lines before beginning the next file.
+The book's **print** tool is intended to “print” some files with
+top and bottom margins, a heading line, and filling the last page
+with blank lines before beginning the next file.
 
 Here instead I write a tool (with the same name) that prints
 arbitrary files to standard output, replacing non-printing
@@ -278,8 +290,8 @@ input and output routines, and a way to cope with *big* files
 
 **Bubble sort** [p.109] is simple, well-known, but slow (running
 time grows as *n* squared when *n* is the input size).
-**Shell sort** [p.110] is more complex, faster, and like Bubble sort,
-it requires no auxiliary memory; its details are intricate
+**Shell sort** [p.110] is more complex, faster, and like Bubble
+sort, it requires no auxiliary memory; its details are intricate
 and for a real-world application a good library routine
 should be preferred over a home-grown implementation.
 **Quicksort** [p.117] runs on average in *n* log *n* time and
@@ -287,16 +299,16 @@ is remarkably simple when described recursively; other than
 Shell sort, it requires a small amount of auxiliary memory,
 either implicitly in the call stack, or with an explicit stack.
 
-In *src/sorting.c* the algorithms are restated in C, and
-a *make check* will run a speed comparison. On a very small
-array, Bubble sort is good because it has little overhead,
+In [sorting.c](../src/sorting.c) the algorithms are restated
+in C, and *make check* will run a spead comparison. On a very
+small array, Bubble sort is good because it has little overhead,
 but its quadratic time complexity soon becomes a pain.
 For a real-world application, consider using the C library's
 *qsort* routine or a specialised sorting library.
 
 > The book on *The AWK Programming Language* has an excellent
 > section on Insertion Sort, Quicksort, and Heapsort, along
-> with hints on testing sort algorithms:
+> with hints on testing sort algorithms. Be sure to test:
 >
 > - the empty input (length 0)
 > - a single item (length 1)
@@ -328,8 +340,8 @@ those two methods are called *compare* and *ptext*).
 
 **External sorting** is required when there is more data than
 fits into memory. The approach taken here is to sort chunks
-(runs) of the data and store them to temporary files. Then
-the first *m* of these files are into a new temporary file
+(runs) of the data and store them to temporary files. Then the
+first *m* of these files are merged into a new temporary file
 and then removed. This is repeated with the next *m* temporary
 files until only one file is left, which is the sorted output.
 The merger order *m* is a parameter, typically between 3 and 7.
@@ -341,8 +353,8 @@ The temporary files will be */tmp/sortxxxx.tmp* or *$TMPDIR/sortxxx.tmp*,
 which is a bit too simple for real life: we risk overwriting existing
 data, which could also be a link to an essential file! For mitigation,
 create a directory writable only to the sorting routine and set the
-`TMPDIR` variable to this directory; sort will then create its temporary
-files in this directory instead of in */tmp*.
+`TMPDIR` environment variable to this directory; sort will then create
+its temporary files in this directory instead of in */tmp*.
 
 **Merging** uses a heap and works like this:
 
@@ -389,9 +401,9 @@ once we can order things, we might like some chaos... Shuffling
 could be implemented as an option to **sort** because we already
 have the whole line reading/writing machinery ready, but from a
 user perspective shuffling is sufficiently different from sorting
-that it merits its own tool. The line reading/writing code is
-factored out into its own file that is referenced by both sort
-and shuffle.
+that it merits its own tool called **shuffle**. The line reading
+and writing code is factored out into its own file that is
+referenced by both sort and shuffle.
 
 The shuffle algorithm is known as “Fisher-Yates”: swap the
 last item with an item from the array chosen at random, then
@@ -417,14 +429,15 @@ Once a file is sorted, it is not difficult to find duplicate
 lines, because they are adjacent. The **unique** tool removes
 adjacent duplicate lines (keeping only one copy). If the
 option `-n` is given, each line is prefixed with the number of
-occurrences of the line in the original input (exercise 4-25).
-It would be a bad idea to suffix this number, because then
-it is in a variable position.
+occurrences of the line in the original input (exercise 4-25;
+it would be a bad idea to suffix this number, because then
+it is in a variable position).
 
 The occurrence prefix minimally complicates matters because
 we only know the number of occurrences after having seen the
 first non-duplicate line. Only now can we emit the number
-and the line. The overall plan is this:
+and the line. The overall plan is to use two line buffers
+and proceed like this:
 
 ```text
 read 1st line into buf0; return if eof; num=1
@@ -435,12 +448,12 @@ emit(num, buf0)
 ```
 
 If buf0 and buf1 are pointers to the actual buffers,
-the "swap" does not have to copy a line, it simply
-changes pointers. The "emit" after the loop is necessary
+the “swap” does not have to copy a line, it simply
+changes pointers. The “emit” after the loop is necessary
 because only upon end-of-input do we know the number of
 occurrences of the last line.
 
-With the tools so far it we can construct a pipeline to
+With the tools so far we can construct a pipeline to
 create a word frequency list for a document; for example:
 
 ```sh
@@ -460,14 +473,14 @@ output: lines only in the 1st file, lines only in the
 Such a tool, in combination with *translit*, *sort*, and
 *unique*, allows comparing documents against dictionaries
 for indicating spelling problems or glossary terms.
-But not today.
+Interesting but not implemented here.
 
 ## Find patterns in lines
 
 The next tool, called **find**, looks for input lines that
-match the given *pattern*. It corresponds to the well-known
-Unix grep(1) tool, though for only a limited subset of
-*regular expressions* and fewer options.
+match a given *pattern*. It corresponds to the well-known
+Unix *grep* tool, though for only a limited subset of
+*regular expressions* and having fewer options.
 
 Option `-i` ignores case, option `-n` prefixes matched lines
 with their line number (exercise 5-20), and option `-v` emits
@@ -518,7 +531,7 @@ replacement text, which we do with the `&` operator.
 ```sh
 change mispell misspell  # replace
 change " *$"             # delete trailing blanks
-change active in&        # prefix "in" (insert)
+change active "in&"      # prefix "in" (insert)
 change "a+b" "(&)"       # parenthesize
 change very "&, &"       # stronger emphasis
 change and "\&"          # escape for a literal ampersand
@@ -528,7 +541,7 @@ The C implementation is again close to the Pascal code
 in the book, with the exception that no special `DITTO`
 value is used in the prepared substitution string; instead,
 the literal `&` serves the purpose, and escaping is handled
-in `putsub`. This way all possible char value are allowed.
+in `putsub`. This way all possible char values are allowed.
 
 With the tools so far it is possible to reverse
 the order of the lines in a file:
@@ -537,16 +550,15 @@ the order of the lines in a file:
 find -n $ | sort -r -n | change "^[0-9]*:"
 ```
 
-The remaining book chapters cover more substantial
-projects: a text editor, a text formatter, and a
-macro processor.
+The remaining book chapters cover more substantial projects:
+a text editor, a text formatter, and a macro processor.
 
 ## Text Editing
 
-The book's chapter 6 is devoted to a text editor similar to
-the standard Unix **ed**(1) editor. The editor's design and
-use is explained, in a way similar to the description of the
-standard editor in Appendix 1 of Kernighan and Pike's 1984
+The book's chapter 6 is devoted to **edit**, a text editor
+similar to the standard Unix *ed* editor. The editor's design
+and use is explained, in a way similar to the description of
+the standard editor in Appendix 1 of Kernighan and Pike's 1984
 *The Unix Programming Environment*.
 The editor is not like today's screen editors. It is driven
 by commands that may be entered interactively, or read from
@@ -556,7 +568,7 @@ today's editors. See the manual page for details.
 
 The editor is the largest program in the book. It can be
 roughly broken into three parts: (1) the buffer, upon
-which (2) the commands operate, and (3) the input parsing.
+which (2) the commands operate, and (3) command parsing.
 
 Input to the editor is a series of commands, one per line,
 each of which looking like
@@ -605,7 +617,7 @@ of undo might be all that is needed.
 
 The **global command** faces the difficulty that it must
 process all matching lines, regardless of how much they are
-rearranged. The approach taken here works in two passes:
+rearranged. The book's approach works in two passes:
 first, mark all matching lines; second, iterate over the
 line buffer repeatedly until no marked lines remain. This
 always terminates (**exercise 6-15**) because each marked
@@ -613,6 +625,11 @@ line found is immediately unmarked and introduced lines, if
 any, are never marked. Therefore, in `doglob`, eventually
 only the `else` branch within the loop will be taken
 and `count` incremented beyond `lastln`.
+
+## Text Formatting
+
+Chapter 7 develops a text formatter in the spirit of Unix
+*troff* but much simpler. Not implemented here.
 
 ## Macro Processing
 
@@ -633,10 +650,11 @@ arithmetics, and the like.
 Fundamental design decisions for the book's macro processor:
 
 - The unit of replacement: an identifier in a typical language.
-- Lazy expansion: expansion will be done as late as possible.
+- Evaluation: as late as possible for **define** and as early
+  as possible for **macro**.
 - Rescanning: a macro's replacement text undergoes again macro expansion.
 
-This implies that an invocation of `x` after `define(x,x)`
+Rescanning implies that an invocation of `x` after `define(x,x)`
 produces an infinite loop, but also that in both cases below,
 `y` produces `1` (good because the user does not have to
 care about the ordering).
@@ -646,7 +664,7 @@ define(x, 1)                define(y, x)
 define(y, x)                define(x, 1)
 ```
 
-The overall structure of the macro processor is:
+The overall structure of the **define** processor is:
 
 ```text
 while gettok(token) != ENDFILE:
@@ -753,7 +771,8 @@ in its own [evalint.c](../src/evalint.c) file.
 
 **Exercise 8-25.** The built-in `trace(on|off)` turns tracing
 on or off; when on, each invocation of a macro or built-in is
-dumped to stderr.
+dumped to stderr. I've also added a built-in `dumpdefs` that
+dumps all definitions to stderr.
 
 **Exercise 8-28.** The macro `rpt(s,n)` shall evaluate to
 `s(1)`, `s(2)`, ... `s(n)` — below is a solution. Unless
@@ -769,7 +788,7 @@ rpt(`sqr',5)           // should emit 1 4 9 16 25
 **Exercise 8-29.** The new built-in `include(fn)` shall
 expand to the contents of the file `fn` and the included
 text shall also be scanned for macros. One idea is to read
-the entire file `fn` into the push back buffer (and reverse).
+the entire file `fn` into the push back buffer (must reverse).
 More economical on memory is a nested call to `expand()` but
 we can only do it after the eval stack has been popped.
 The latter approach has been implemented.
@@ -811,9 +830,7 @@ Tools in the book but not implemented here:
 *kwic* and *unrotate*, *format*.
 Tools implemented here but not in the book: *shuffle*.
 
-The only thing that is really missing is a simple **shell**
-and maybe an equivalent for the Unix *find* command, which
-looks for files.
+The only thing that is really missing is a simple **shell**.
 On the other hand, all tools presented in the book also
 exist in any Unix system today, some using different names.
 Therefore in real life, you would probably want to stick to
@@ -824,7 +841,7 @@ insight into and appreciation of those tools.
 [busybox]: https://busybox.net/
 [coreutils]: https://www.gnu.org/software/coreutils/
 
-Here are a few ideas for simple improvements:
+Here are a few ideas for improvements:
 
 - count: an option to count UTF-8 characters
 - print: parameters for offset and count
@@ -837,3 +854,22 @@ Here are a few ideas for simple improvements:
 - macro: hold expansion of name in define(name,stuff),
   forget(name), ifdef(name, ...) – would add to usability,
   but that is my personal opinion.
+
+## One Last Remark
+
+There are many routines for scanning text. In the book,
+they have signatures like `int scanint(text, int *pindex)`,
+that is, they take a pointer to the current index into the
+text, they update this index an return the scanned value.
+This interface is convenient to use, but the index pointer
+is somewhat ugly and there is no straightforward way to
+signal a syntax error.
+
+Another scheme that I have been using for a long time is
+to return the number of characters scanned like this:
+`size_t scanint(text, int *pvalue)`. Now a return of `0`
+can easily signal an error, but it tends to be somewhat
+less convenient to use: the returned length must be added
+to the text pointer for subsequent scans, and the value
+cannot be used in compound expressions because it always
+goes to a variable.
