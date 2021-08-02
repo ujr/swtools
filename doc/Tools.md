@@ -148,8 +148,8 @@ My C version of **echo** always outputs a newline, even if no arguments
 are given. As in Unix versions of echo, the newline can be omitted
 with the `-n` option, and interpretation of a few escape sequences can
 be turned on with the `-e` option (though not the `\c` escape to
-produce no further output). You may want to search the Internet
-for the little story about *The Unix and the Echo* by Doug McIlroy.
+produce no further output). You may want to read the little story
+about [The Unix and the Echo](./UnixEcho.md) by Doug McIlroy.
 
 ## Transliteration
 

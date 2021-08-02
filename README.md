@@ -14,6 +14,8 @@ My progress through the book, along with notes about the
 individual tools and their restatement in C can be found
 in [doc/Tools.md](doc/Tools.md). Notes not directly related
 to the book or the tools are in [doc/Notes.md](doc/Notes.md).
+And for a mythical view on the seemingly simplest tool of all,
+read [The Unix and the Echo](doc/UnixEcho.md) by Doug McIlroy.
 
 ## Getting Started
 
